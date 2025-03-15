@@ -1,0 +1,502 @@
+// 错题本容器
+.errorBookContainer {
+  width: 100%;
+  padding: 24px;
+}
+
+// 头部区域
+.headerSection {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .pageTitle {
+    margin-bottom: 16px;
+
+    @media (min-width: 768px) {
+      margin-bottom: 0;
+    }
+  }
+
+  .filterSection {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .filterSelect {
+      min-width: 120px;
+    }
+
+    .filterButton {
+      background-color: #5B5CFF;
+      border-color: #5B5CFF;
+    }
+  }
+}
+
+// 错题列表
+.errorList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
+
+  .errorCard {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    transition: transform 0.3s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .cardHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+
+      .tags {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .difficultyTag, .categoryTag {
+          margin: 0;
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-size: 12px;
+        }
+
+        .errorCount {
+          font-size: 14px;
+          color: #666;
+        }
+      }
+
+      .metaInfo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .lastErrorDate {
+          font-size: 14px;
+          color: #666;
+        }
+
+        .moreButton {
+          color: #999;
+          
+          &:hover {
+            color: #5B5CFF;
+          }
+        }
+      }
+    }
+
+    .questionContent {
+      margin-bottom: 16px;
+
+      .questionText {
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 16px;
+
+        .questionNumber {
+          font-weight: 600;
+          margin-right: 8px;
+        }
+      }
+
+      .optionsGrid {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+
+        @media (min-width: 576px) {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .optionItem {
+          .correctOption {
+            color: #52c41a;
+          }
+
+          .wrongOption {
+            color: #f5222d;
+          }
+        }
+      }
+
+      .errorAnalysis {
+        background-color: #fff1f0;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #cf1322;
+          margin-bottom: 8px;
+        }
+
+        p {
+          color: #666;
+          margin-bottom: 0;
+        }
+      }
+
+      .solutionSteps {
+        background-color: #f0f5ff;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1d39c4;
+          margin-bottom: 8px;
+        }
+
+        .steps {
+          color: #666;
+
+          p {
+            margin-bottom: 4px;
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+          }
+        }
+      }
+
+      .relatedKnowledge {
+        background-color: #e6f7ff;
+        padding: 16px;
+        border-radius: 8px;
+
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #096dd9;
+          margin-bottom: 8px;
+        }
+
+        ul {
+          list-style-type: disc;
+          padding-left: 20px;
+          margin: 0;
+          color: #666;
+
+          li {
+            margin-bottom: 4px;
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+          }
+        }
+      }
+    }
+
+    .cardFooter {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+
+      .actions {
+        display: flex;
+        gap: 16px;
+
+        .actionButton {
+          color: #666;
+          padding: 0;
+
+          &:hover {
+            color: #5B5CFF;
+          }
+        }
+      }
+
+      .mainActions {
+        display: flex;
+        gap: 12px;
+
+        .retryButton {
+          border-color: #5B5CFF;
+          color: #5B5CFF;
+
+          &:hover {
+            background-color: #f0f5ff;
+          }
+        }
+
+        .masteredButton {
+          background-color: #52c41a;
+          border-color: #52c41a;
+
+          &:hover {
+            background-color: #389e0d;
+            border-color: #389e0d;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 分页
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+// 侧边栏样式
+.sidebar {
+  padding: 24px 16px;
+  height: 100%;
+  background-color: #f9f9fb;
+  border-right: 1px solid #eaeaea;
+
+  // 错题统计
+  .errorStats {
+    background: linear-gradient(to bottom right, #f0f5ff, #f9f0ff);
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 32px;
+
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    .statsGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+
+      .statItem {
+        display: flex;
+        flex-direction: column;
+
+        .statLabel {
+          font-size: 12px;
+          color: #666;
+          margin-bottom: 4px;
+        }
+
+        .statValue {
+          font-size: 20px;
+          font-weight: 600;
+          color: #5B5CFF;
+
+          &:last-child {
+            color: #52c41a;
+          }
+        }
+      }
+    }
+  }
+
+  // 题库分类
+  .examCategories {
+    margin-bottom: 32px;
+
+    h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .categoryLinks {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .categoryLink {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 8px;
+        color: #666;
+        transition: all 0.3s;
+
+        &:hover {
+          background-color: #f5f5f5;
+          color: #5B5CFF;
+        }
+
+        &.active {
+          background-color: #f0f5ff;
+          color: #5B5CFF;
+        }
+
+        svg {
+          margin-right: 12px;
+        }
+      }
+    }
+  }
+
+  // 科目分类
+  .subjectCategories {
+    margin-bottom: 32px;
+
+    h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .subjectList {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .subjectItem {
+        .subjectInfo {
+          display: flex;
+          align-items: center;
+          padding: 8px 12px;
+          border-radius: 8px;
+          transition: background-color 0.3s;
+
+          &:hover {
+            background-color: #f5f5f5;
+          }
+
+          .subjectDot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 12px;
+          }
+
+          .subjectName {
+            flex: 1;
+            color: #666;
+          }
+
+          .subjectCount {
+            font-size: 12px;
+            color: #999;
+            background-color: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+          }
+        }
+      }
+    }
+  }
+
+  // 难度分类
+  .difficultyCategories {
+    h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .difficultyList {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .difficultyItem {
+        .difficultyInfo {
+          display: flex;
+          align-items: center;
+          padding: 8px 12px;
+          border-radius: 8px;
+          transition: background-color 0.3s;
+
+          &:hover {
+            background-color: #f5f5f5;
+          }
+
+          .difficultyDot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 12px;
+          }
+
+          .difficultyName {
+            flex: 1;
+            color: #666;
+          }
+
+          .difficultyCount {
+            font-size: 12px;
+            color: #999;
+            background-color: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media screen and (max-width: 768px) {
+  .errorBookContainer {
+    padding: 16px;
+  }
+
+  .headerSection {
+    .filterSection {
+      .filterSelect {
+        flex: 1;
+        min-width: 100px;
+      }
+    }
+  }
+
+  .errorCard {
+    .cardHeader {
+      flex-direction: column;
+      gap: 12px;
+
+      .metaInfo {
+        align-self: flex-end;
+      }
+    }
+
+    .cardFooter {
+      flex-direction: column;
+      gap: 16px;
+
+      .mainActions {
+        align-self: flex-end;
+      }
+    }
+  }
+} 

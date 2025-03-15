@@ -1,0 +1,96 @@
+.cardLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card {
+  height: 100%;
+  transition: transform 0.3s, box-shadow 0.3s;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.header {
+  display: flex;
+  margin-bottom: 16px;
+}
+
+.avatar {
+  flex-shrink: 0;
+  border: 2px solid #f0f0f0;
+}
+
+.info {
+  margin-left: 16px;
+  flex-grow: 1;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.name {
+  margin: 0 8px 0 0 !important;
+}
+
+.certifiedTag, .recommendedTag {
+  margin-right: 4px;
+}
+
+.title, .institution {
+  display: block;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.specialties {
+  margin-bottom: 12px;
+}
+
+.specialtyTag {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.description {
+  color: #666;
+  margin-bottom: 16px !important;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  
+  svg {
+    margin-right: 4px;
+    color: #1890ff;
+  }
+  
+  span {
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+.viewButton {
+  background-color: #1890ff;
+  border-color: #1890ff;
+  
+  &:hover, &:focus {
+    background-color: #40a9ff;
+    border-color: #40a9ff;
+  }
+} 

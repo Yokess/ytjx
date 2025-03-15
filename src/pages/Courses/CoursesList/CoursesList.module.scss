@@ -1,0 +1,461 @@
+.pageContainer {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+.coursesContainer {
+  width: 100%;
+}
+
+.statsCards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+
+  .statCard {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    padding: 16px;
+
+    .statIcon {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-right: 16px;
+    }
+
+    .statInfo {
+      h3 {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+      }
+
+      p {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0;
+        color: #333;
+      }
+    }
+  }
+}
+
+.featureCards {
+  margin-bottom: 24px;
+
+  .featureCard {
+    height: 160px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+    .featureContent {
+      padding: 24px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+
+      h2 {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #fff;
+      }
+
+      p {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .featureButton {
+        align-self: flex-start;
+        background: #fff;
+        color: #5B5CFF;
+        border: none;
+        font-weight: 500;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.9);
+          color: #5B5CFF;
+        }
+      }
+    }
+
+    &:nth-child(2) {
+      .featureContent {
+        h2 {
+          color: #333;
+        }
+
+        p {
+          color: #666;
+        }
+
+        .featureButton {
+          background: #5B5CFF;
+          color: #fff;
+
+          &:hover {
+            background: darken(#5B5CFF, 5%);
+            color: #fff;
+          }
+        }
+      }
+    }
+  }
+}
+
+.filterCard {
+  margin-bottom: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  .filterContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+
+    .categories {
+      display: flex;
+      gap: 12px;
+
+      button {
+        font-size: 14px;
+      }
+    }
+
+    .search {
+      width: 240px;
+    }
+  }
+}
+
+.coursesList {
+  margin-bottom: 24px;
+}
+
+// 侧边栏样式
+.sidebar {
+  width: 260px;
+  background: #fff;
+  padding: 24px 16px;
+  border-right: 1px solid #f0f0f0;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+
+  .logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #5B5CFF;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+
+  .todayStudy {
+    margin-bottom: 32px;
+
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .studyProgress {
+      .progressInfo {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 14px;
+        color: #666;
+
+        .progressValue {
+          color: #5B5CFF;
+          font-weight: 500;
+        }
+      }
+
+      .progressBar {
+        height: 8px;
+        border-radius: 4px;
+      }
+    }
+  }
+
+  .courseCategories {
+    margin-bottom: 32px;
+
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .categoryLinks {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .categoryLink {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        color: #666;
+        transition: all 0.3s;
+
+        &:hover {
+          background: rgba(91, 92, 255, 0.05);
+          color: #5B5CFF;
+        }
+
+        &.active {
+          background: rgba(91, 92, 255, 0.1);
+          color: #5B5CFF;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  .subjectCategories {
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .subjectList {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .subjectItem {
+        .subjectInfo {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+
+          .subjectName {
+            font-weight: 500;
+          }
+
+          .subjectCount {
+            font-size: 12px;
+            color: #999;
+          }
+        }
+
+        .subjectProgress {
+          .progressBar {
+            height: 6px;
+            border-radius: 3px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 主要内容区样式
+.mainContent {
+  flex: 1;
+  margin-left: 260px;
+  padding: 24px;
+
+  .topNav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 16px 24px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+    .navLinks {
+      display: flex;
+      gap: 32px;
+
+      .navLink {
+        color: #666;
+        font-size: 16px;
+        transition: color 0.3s;
+
+        &:hover {
+          color: #5B5CFF;
+        }
+
+        &.active {
+          color: #5B5CFF;
+          font-weight: 500;
+        }
+      }
+    }
+
+    .userArea {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+
+      .notifications {
+        position: relative;
+        font-size: 20px;
+        color: #666;
+        cursor: pointer;
+
+        .badge {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          background: #ff4d4f;
+          color: #fff;
+          font-size: 12px;
+          padding: 2px 6px;
+          border-radius: 10px;
+        }
+      }
+
+      .userInfo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+
+        img {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
+        div {
+          display: flex;
+          flex-direction: column;
+
+          .userName {
+            font-weight: 500;
+          }
+
+          .userDays {
+            font-size: 12px;
+            color: #666;
+          }
+        }
+      }
+    }
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+
+    .pageButton {
+      min-width: 100px;
+    }
+
+    button {
+      height: 36px;
+      font-size: 14px;
+
+      &:not(:global(.ant-btn-primary)) {
+        border-color: #e8e8e8;
+        color: #666;
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media screen and (max-width: 1200px) {
+  .statsCards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .sidebar {
+    width: 200px;
+  }
+
+  .mainContent {
+    margin-left: 200px;
+  }
+
+  .topNav {
+    .navLinks {
+      gap: 16px !important;
+    }
+  }
+
+  .filterCard {
+    .filterContainer {
+      flex-direction: column;
+      gap: 16px;
+
+      .categories {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 8px;
+      }
+
+      .search {
+        width: 100% !important;
+      }
+    }
+  }
+
+  .statsCards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .mainContent {
+    margin-left: 0;
+  }
+
+  .topNav {
+    .navLinks {
+      display: none;
+    }
+  }
+
+  .statsCards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .filterContainer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+
+    .categories {
+      width: 100%;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+
+    .search {
+      width: 100% !important;
+    }
+  }
+} 

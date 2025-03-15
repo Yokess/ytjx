@@ -1,0 +1,296 @@
+// 视频播放页面样式
+.videoPlayerContainer {
+  padding: 24px;
+  background-color: #f5f5f5;
+  min-height: calc(100vh - 64px);
+}
+
+.videoSection {
+  margin-bottom: 24px;
+  
+  .playerWrapper {
+    position: relative;
+    width: 100%;
+    background-color: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    
+    .videoPlayer {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background-color: #000;
+    }
+    
+    .controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      
+      .playbackControls {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: #fff;
+        
+        .playButton {
+          font-size: 24px;
+          cursor: pointer;
+        }
+        
+        .timeDisplay {
+          font-size: 14px;
+          margin: 0 8px;
+        }
+      }
+      
+      .rightControls {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: #fff;
+        
+        .volumeControl {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          
+          .volumeSlider {
+            width: 80px;
+          }
+        }
+        
+        .fullscreenButton {
+          font-size: 20px;
+          cursor: pointer;
+        }
+      }
+    }
+  }
+}
+
+.videoInfo {
+  background-color: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  
+  .videoTitle {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    
+    .titleText {
+      margin-bottom: 8px;
+    }
+    
+    .courseInfo {
+      color: #666;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+  
+  .videoActions {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+    
+    .actionButton {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+  
+  .videoDescription {
+    margin-top: 16px;
+    color: #666;
+  }
+}
+
+.contentTabs {
+  background-color: #fff;
+  border-radius: 8px;
+  
+  .tabContent {
+    padding: 24px;
+    
+    .notesSection {
+      .noteInput {
+        margin-bottom: 24px;
+        
+        .noteActions {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 16px;
+        }
+      }
+      
+      .notesList {
+        .noteItem {
+          padding: 16px;
+          border: 1px solid #f0f0f0;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          
+          .noteTime {
+            color: #1890ff;
+            cursor: pointer;
+            margin-bottom: 8px;
+          }
+          
+          .noteContent {
+            margin-bottom: 8px;
+          }
+          
+          .noteFooter {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            
+            .noteTimestamp {
+              color: #999;
+              font-size: 12px;
+            }
+            
+            .noteActions {
+              display: flex;
+              gap: 16px;
+            }
+          }
+        }
+      }
+    }
+    
+    .discussionSection {
+      .commentInput {
+        margin-bottom: 24px;
+      }
+      
+      .discussionList {
+        .discussionItem {
+          margin-bottom: 24px;
+          
+          .commentActions {
+            margin-top: 8px;
+            display: flex;
+            gap: 16px;
+          }
+          
+          .replySection {
+            margin-top: 16px;
+            
+            .replyInput {
+              margin-bottom: 16px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.chapterList {
+  background-color: #fff;
+  border-radius: 8px;
+  height: 100%;
+  
+  .chapterTitle {
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .videoList {
+    .chapterHeader {
+      padding: 12px 16px;
+      background-color: #f5f5f5;
+      font-weight: 500;
+    }
+    
+    .videoItem {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: #f5f5f5;
+      }
+      
+      &.active {
+        background-color: #e6f7ff;
+        border-right: 3px solid #1890ff;
+      }
+      
+      .videoIcon {
+        margin-right: 12px;
+        color: #1890ff;
+      }
+      
+      .videoItemInfo {
+        flex: 1;
+        
+        .videoItemTitle {
+          margin-bottom: 4px;
+        }
+        
+        .videoItemMeta {
+          display: flex;
+          justify-content: space-between;
+          color: #999;
+          font-size: 12px;
+        }
+      }
+    }
+  }
+}
+
+.progressBar {
+  margin: 16px 0;
+  
+  :global {
+    .ant-progress-text {
+      font-size: 12px;
+    }
+  }
+}
+
+// 响应式样式
+@media (max-width: 768px) {
+  .videoPlayerContainer {
+    padding: 16px;
+  }
+  
+  .videoInfo {
+    padding: 16px;
+    
+    .videoTitle {
+      flex-direction: column;
+      
+      .actionButtons {
+        margin-top: 16px;
+        align-self: flex-start;
+      }
+    }
+    
+    .videoActions {
+      flex-wrap: wrap;
+    }
+  }
+  
+  .contentTabs {
+    .tabContent {
+      padding: 16px;
+    }
+  }
+} 

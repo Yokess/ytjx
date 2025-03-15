@@ -1,0 +1,352 @@
+// 社区页面样式
+.communityPage {
+  padding: 24px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+// 页面头部
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+.headerActions {
+  display: flex;
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+.searchInput {
+  width: 240px;
+
+  @media (max-width: 768px) {
+    flex: 1;
+  }
+}
+
+// 侧边栏
+.sidebar {
+  width: 100%;
+}
+
+.userCard {
+  margin-bottom: 16px;
+}
+
+.userInfo {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.userMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.userName {
+  font-size: 16px;
+}
+
+.userTags {
+  margin-top: 4px;
+}
+
+.userStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  text-align: center;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+}
+
+.statItem {
+  padding: 8px 0;
+}
+
+.statValue {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #999;
+}
+
+.sectionCard {
+  margin-bottom: 16px;
+}
+
+.sectionList {
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.sectionInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tagCloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagItem {
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+// 主内容区
+.mainContent {
+  flex: 1;
+}
+
+// 专栏部分
+.columnsSection {
+  margin-bottom: 24px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.viewMore {
+  font-size: 14px;
+}
+
+.columnsList {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.columnCard {
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.columnCover {
+  height: 120px;
+  position: relative;
+}
+
+.columnTitle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  color: white;
+  font-weight: 500;
+}
+
+.columnContent {
+  padding: 16px;
+}
+
+.columnAuthor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.authorTitle {
+  font-size: 12px;
+  color: #666;
+}
+
+.columnDesc {
+  margin-bottom: 12px;
+  color: #666;
+}
+
+.columnMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+// 帖子部分
+.postsSection {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.postFilters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
+.postTabs {
+  flex: 1;
+}
+
+.sectionSelect {
+  width: 150px;
+}
+
+.postsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.postCard {
+  transition: transform 0.3s, box-shadow 0.3s;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.postTags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.postMain {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+  }
+}
+
+.postContent {
+  flex: 1;
+}
+
+.postTitle {
+  margin-bottom: 8px !important;
+
+  a {
+    color: #333;
+    transition: color 0.3s;
+
+    &:hover {
+      color: #4f46e5;
+    }
+  }
+}
+
+.postExcerpt {
+  color: #666;
+  margin-bottom: 12px !important;
+}
+
+.postMeta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.postAuthor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.postStats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+
+  @media (max-width: 576px) {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #999;
+}
+
+.postFooter {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+// 分页
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+} 

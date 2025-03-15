@@ -1,0 +1,59 @@
+.registerContainer {
+  padding: 24px;
+  background-color: white;
+  border-radius: 8px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 14px;
+}
+
+.tabs {
+  margin-bottom: 16px;
+}
+
+.form {
+  max-width: 100%;
+}
+
+.inputIcon {
+  color: #bfbfbf;
+}
+
+.registerButton {
+  height: 44px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #5B5CFF, #8E44AD);
+  border: none;
+  
+  &:hover {
+    background: linear-gradient(135deg, #4849E8, #7D32A1);
+  }
+}
+
+.loginLink {
+  text-align: center;
+  margin-bottom: 0;
+  
+  a {
+    color: #5B5CFF;
+    font-weight: 500;
+    
+    &:hover {
+      color: #4849E8;
+    }
+  }
+} 

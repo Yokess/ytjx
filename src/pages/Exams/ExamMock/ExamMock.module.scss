@@ -1,0 +1,536 @@
+.examMockContainer {
+  width: 100%;
+}
+
+// 统计卡片样式
+.statsCards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+
+  .statCard {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    padding: 16px;
+
+    .statIcon {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-right: 16px;
+    }
+
+    .statInfo {
+      h3 {
+        font-size: 14px;
+        color: #666;
+        margin: 0 0 4px 0;
+      }
+
+      p {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0;
+        color: #333;
+      }
+    }
+  }
+}
+
+// 卡片通用样式
+.sectionCard {
+  margin-bottom: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+
+  .cardTitle {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 600;
+
+    .titleIcon {
+      margin-right: 8px;
+      color: #5B5CFF;
+    }
+  }
+}
+
+// 进行中的考试样式
+.ongoingExam {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: #f0f5ff;
+
+  .examInfo {
+    display: flex;
+    align-items: center;
+    flex: 1;
+
+    .examIcon {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      background-color: #e6f7ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #5B5CFF;
+      margin-right: 16px;
+    }
+
+    .examDetails {
+      flex: 1;
+
+      .examHeader {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+
+        h3 {
+          font-size: 16px;
+          font-weight: 600;
+          margin: 0;
+          margin-right: 12px;
+        }
+      }
+
+      .examStats {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        font-size: 14px;
+        color: #666;
+
+        .progressWrapper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          span {
+            white-space: nowrap;
+          }
+
+          .progressBar {
+            width: 120px;
+            margin-bottom: 0;
+          }
+        }
+      }
+    }
+  }
+
+  .continueButton {
+    background-color: #5B5CFF;
+    border-color: #5B5CFF;
+    border-radius: 20px;
+    padding: 0 24px;
+    height: 40px;
+  }
+}
+
+// 可参加的考试样式
+.availableExams {
+  .examItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: #f9f9f9;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .examInfo {
+      display: flex;
+      align-items: center;
+      flex: 1;
+
+      .examIcon {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-right: 16px;
+      }
+
+      .examDetails {
+        flex: 1;
+
+        .examHeader {
+          display: flex;
+          align-items: center;
+          margin-bottom: 8px;
+
+          h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            margin-right: 12px;
+          }
+        }
+
+        .examStats {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 16px;
+          font-size: 14px;
+          color: #666;
+
+          .examTypes {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+
+            .typeTag {
+              margin: 0;
+              padding: 0 8px;
+              font-size: 12px;
+              line-height: 18px;
+              border-radius: 10px;
+            }
+          }
+        }
+      }
+    }
+
+    .examActions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .infoButton {
+        color: #666;
+        
+        &:hover {
+          color: #5B5CFF;
+        }
+      }
+
+      .startButton {
+        background-color: #5B5CFF;
+        border-color: #5B5CFF;
+        border-radius: 20px;
+        padding: 0 24px;
+        height: 36px;
+      }
+    }
+  }
+}
+
+// 历史考试记录样式
+.historySection {
+  margin-bottom: 24px;
+
+  .sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .viewAllLink {
+      font-size: 14px;
+      color: #5B5CFF;
+    }
+  }
+
+  .historyCard {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+
+    .historyTable {
+      .examTitle {
+        font-weight: 500;
+      }
+
+      .examDate {
+        color: #666;
+      }
+
+      .examScore {
+        font-weight: 600;
+        color: #333;
+      }
+
+      .rankingTag {
+        font-size: 12px;
+        padding: 0 8px;
+        border-radius: 10px;
+      }
+
+      .detailButton {
+        color: #5B5CFF;
+        padding: 0;
+      }
+    }
+  }
+}
+
+// 考试说明弹窗样式
+.examInfoModal {
+  .examRules {
+    .rulesSection {
+      background-color: #fffbe6;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+
+      h4 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #d48806;
+        margin-bottom: 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+        color: #666;
+
+        li {
+          margin-bottom: 8px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+      }
+    }
+
+    .distributionSection {
+      h4 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+
+      .distributionItem {
+        background-color: #f5f5f5;
+        padding: 16px;
+        border-radius: 8px;
+        text-align: center;
+
+        .distributionType {
+          font-size: 14px;
+          color: #666;
+          margin-bottom: 8px;
+        }
+
+        .distributionValue {
+          font-size: 16px;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+// 侧边栏样式
+.sidebar {
+  padding: 24px 16px;
+  height: 100%;
+  background-color: #f9f9fb;
+  border-right: 1px solid #eaeaea;
+
+  .examStats {
+    background: linear-gradient(to bottom right, #f0f5ff, #f9f0ff);
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 32px;
+
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    .statsGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+
+      .statItem {
+        display: flex;
+        flex-direction: column;
+
+        .statLabel {
+          font-size: 12px;
+          color: #666;
+          margin-bottom: 4px;
+        }
+
+        .statValue {
+          font-size: 20px;
+          font-weight: 600;
+          color: #5B5CFF;
+        }
+      }
+    }
+  }
+
+  .examCategories {
+    margin-bottom: 32px;
+
+    h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .categoryLinks {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .categoryLink {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 8px;
+        color: #666;
+        transition: all 0.3s;
+
+        &:hover {
+          background-color: #f5f5f5;
+          color: #5B5CFF;
+        }
+
+        &.active {
+          background-color: #f0f5ff;
+          color: #5B5CFF;
+        }
+
+        svg {
+          margin-right: 12px;
+        }
+      }
+    }
+  }
+
+  .subjectCategories {
+    h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .subjectList {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .subjectItem {
+        .subjectInfo {
+          display: flex;
+          align-items: center;
+          padding: 8px 12px;
+          border-radius: 8px;
+          transition: background-color 0.3s;
+
+          &:hover {
+            background-color: #f5f5f5;
+          }
+
+          .subjectDot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 12px;
+          }
+
+          .subjectName {
+            flex: 1;
+            color: #666;
+          }
+
+          .subjectCount {
+            font-size: 12px;
+            color: #999;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media screen and (max-width: 992px) {
+  .statsCards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ongoingExam {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .continueButton {
+      margin-top: 16px;
+      align-self: flex-end;
+    }
+  }
+
+  .examItem {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .examActions {
+      margin-top: 16px;
+      align-self: flex-end;
+    }
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .statsCards {
+    grid-template-columns: 1fr;
+  }
+
+  .examStats {
+    flex-direction: column;
+    gap: 8px;
+
+    .progressWrapper {
+      width: 100%;
+
+      .progressBar {
+        flex: 1;
+      }
+    }
+  }
+} 

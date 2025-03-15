@@ -1,26 +1,30 @@
 import React from 'react';
-import logo from './logo.svg';
+import { BrowserRouter } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { ConfigProvider } from 'antd';
+import zhCN from 'antd/lib/locale/zh_CN';
+import store, { persistor } from './store';
+import AppRoutes from './routes';
 import './App.css';
 
-function App() {
+const App: React.FC = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <ConfigProvider locale={zhCN} theme={{
+          token: {
+            colorPrimary: '#5B5CFF',
+            borderRadius: 4,
+          },
+        }}>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ConfigProvider>
+      </PersistGate>
+    </Provider>
   );
-}
+};
 
 export default App;

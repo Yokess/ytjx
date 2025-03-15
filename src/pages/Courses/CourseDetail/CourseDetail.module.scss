@@ -1,0 +1,448 @@
+.courseDetailPage {
+  width: 100%;
+}
+
+// 课程头部样式
+.courseHeader {
+  background: linear-gradient(to right, #5B5CFF, #8E44AD);
+  color: white;
+  padding: 48px 0;
+  margin-bottom: 32px;
+}
+
+.courseHeaderContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.courseInfo {
+  .courseMetaTags {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .ratingWrapper {
+    display: flex;
+    align-items: center;
+    
+    :global(.ant-rate) {
+      font-size: 14px;
+      color: #FFD700;
+    }
+    
+    .ratingText {
+      margin-left: 8px;
+      color: rgba(255, 255, 255, 0.85);
+    }
+  }
+
+  .courseTitle {
+    color: white;
+    margin-bottom: 16px;
+  }
+
+  .courseDescription {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+
+  .courseStats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    
+    .statItem {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.85);
+      
+      svg {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+// 价格卡片样式
+.priceCard {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  
+  .priceWrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    
+    .priceInfo {
+      .currentPrice {
+        font-size: 24px;
+        font-weight: bold;
+        color: #f5222d;
+      }
+      
+      .originalPrice {
+        font-size: 16px;
+        color: #bfbfbf;
+        text-decoration: line-through;
+        margin-left: 8px;
+      }
+    }
+    
+    .discountTag {
+      font-size: 12px;
+    }
+  }
+  
+  .buyButton {
+    background: linear-gradient(to right, #5B5CFF, #8E44AD);
+    border: none;
+    height: 44px;
+    font-size: 16px;
+    margin-bottom: 12px;
+    
+    &:hover {
+      background: linear-gradient(to right, #4849E8, #7D32A1);
+      opacity: 0.9;
+    }
+  }
+  
+  .cartButton {
+    height: 44px;
+    font-size: 16px;
+    margin-bottom: 24px;
+    border-color: #5B5CFF;
+    color: #5B5CFF;
+    
+    &:hover {
+      color: #4849E8;
+      border-color: #4849E8;
+      background-color: rgba(75, 73, 232, 0.05);
+    }
+  }
+  
+  .featuresList {
+    margin-top: 16px;
+    
+    .featuresTitle {
+      display: block;
+      text-align: center;
+      color: #8c8c8c;
+      margin-bottom: 16px;
+    }
+    
+    .featureItem {
+      padding: 8px 0;
+      
+      .checkIcon {
+        color: #52c41a;
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+// 课程内容区样式
+.courseContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+.contentCard {
+  margin-bottom: 24px;
+  border-radius: 8px;
+  
+  .courseTabs {
+    :global(.ant-tabs-nav) {
+      margin-bottom: 16px;
+    }
+  }
+}
+
+// 课程介绍内容样式
+.introductionContent {
+  .sectionTitle {
+    margin-top: 24px;
+    margin-bottom: 16px;
+  }
+  
+  .featuresList {
+    padding-left: 20px;
+    
+    li {
+      margin-bottom: 8px;
+    }
+  }
+}
+
+// 课程目录样式
+.curriculumContent {
+  .chaptersCollapse {
+    background-color: transparent;
+    
+    .chapterPanel {
+      margin-bottom: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .lessonItem {
+      padding: 8px 16px;
+      
+      .lessonInfo {
+        display: flex;
+        align-items: center;
+        
+        .lessonIcon {
+          color: #5B5CFF;
+          margin-right: 8px;
+        }
+      }
+    }
+  }
+}
+
+// 评价样式
+.reviewsContent {
+  .reviewItem {
+    padding: 16px 0;
+    
+    .reviewHeader {
+      display: flex;
+      margin-bottom: 16px;
+      
+      .reviewerInfo {
+        margin-left: 16px;
+        
+        .reviewMeta {
+          display: flex;
+          align-items: center;
+          margin-top: 4px;
+          
+          :global(.ant-rate) {
+            font-size: 14px;
+          }
+          
+          .reviewDate {
+            margin-left: 8px;
+            font-size: 12px;
+          }
+        }
+      }
+    }
+    
+    .reviewContent {
+      color: #595959;
+    }
+  }
+}
+
+// FAQ样式
+.faqContent {
+  .faqCollapse {
+    background-color: transparent;
+  }
+}
+
+// 讲师卡片样式
+.teacherCard {
+  margin-bottom: 24px;
+  border-radius: 8px;
+  
+  .teacherInfo {
+    display: flex;
+    margin-top: 16px;
+    
+    .teacherAvatar {
+      flex-shrink: 0;
+    }
+    
+    .teacherDetail {
+      margin-left: 24px;
+      
+      h5 {
+        margin-bottom: 4px;
+      }
+      
+      .teacherDescription {
+        margin-top: 12px;
+        color: #595959;
+      }
+      
+      .teacherStats {
+        display: flex;
+        gap: 24px;
+        margin-top: 16px;
+        
+        .teacherStatItem {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #8c8c8c;
+        }
+      }
+    }
+  }
+}
+
+// 侧边栏卡片样式
+.sidebarCard {
+  margin-bottom: 24px;
+  border-radius: 8px;
+  
+  .sidebarCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    
+    h4 {
+      margin-bottom: 0;
+    }
+  }
+  
+  .sidebarCollapse {
+    background-color: transparent;
+    
+    .sidebarPanel {
+      margin-bottom: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .sidebarLessonItem {
+      padding: 8px 0;
+      
+      .lessonInfo {
+        display: flex;
+        align-items: center;
+        
+        .lessonIcon {
+          color: #5B5CFF;
+          margin-right: 8px;
+        }
+      }
+    }
+  }
+  
+  .viewAllWrapper {
+    text-align: center;
+    margin-top: 16px;
+  }
+  
+  .relatedCourseItem {
+    display: flex;
+    padding: 12px 0;
+    
+    .relatedCourseCover {
+      width: 80px;
+      height: 60px;
+      border-radius: 4px;
+      overflow: hidden;
+      flex-shrink: 0;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+    
+    .relatedCourseInfo {
+      margin-left: 12px;
+      
+      .relatedCourseTitle {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
+      
+      .relatedCourseRating {
+        display: flex;
+        align-items: center;
+        margin-bottom: 4px;
+        
+        :global(.ant-rate) {
+          font-size: 12px;
+          margin-right: 4px;
+        }
+      }
+    }
+  }
+}
+
+// 移动端底部购买栏
+.mobileBottomBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  
+  .mobilePrice {
+    .mobilePriceText {
+      font-size: 20px;
+      font-weight: bold;
+      color: #f5222d;
+    }
+    
+    .mobileOriginalPrice {
+      font-size: 14px;
+      color: #bfbfbf;
+      text-decoration: line-through;
+      margin-left: 8px;
+    }
+  }
+  
+  .mobileBuyButton {
+    background: linear-gradient(to right, #5B5CFF, #8E44AD);
+    border: none;
+    height: 40px;
+    padding: 0 24px;
+    
+    &:hover {
+      background: linear-gradient(to right, #4849E8, #7D32A1);
+      opacity: 0.9;
+    }
+  }
+}
+
+// 响应式调整
+@media (max-width: 768px) {
+  .courseHeader {
+    padding: 32px 0;
+  }
+  
+  .teacherInfo {
+    flex-direction: column;
+    
+    .teacherAvatar {
+      margin-bottom: 16px;
+    }
+    
+    .teacherDetail {
+      margin-left: 0 !important;
+    }
+  }
+}
+
+@media (min-width: 769px) {
+  .mobileBottomBar {
+    display: none;
+  }
+} 
