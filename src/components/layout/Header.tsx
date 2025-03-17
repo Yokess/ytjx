@@ -62,7 +62,7 @@ const Header: React.FC = () => {
   const menuItems = [
     { key: '/', label: '首页' },
     { key: '/courses', label: '精品课程' },
-    { key: '/exams', label: '在线题库' },
+    { key: '/questions', label: '在线题库' },
     { key: '/ai-assistant', label: '智能助手' },
     { key: '/community', label: '学习社区' },
   ];

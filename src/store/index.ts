@@ -4,10 +4,12 @@ import storage from 'redux-persist/lib/storage';
 import { combineReducers } from 'redux';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import authReducer from './slices/authSlice';
+import questionReducer from './slices/questionSlice';
 
 // 创建一个空的reducer，后续会添加实际的reducer
 const rootReducer = combineReducers({
   auth: authReducer,
+  question: questionReducer,
   // 后续会添加各个功能模块的reducer
 });
 

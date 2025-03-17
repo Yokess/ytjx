@@ -76,7 +76,7 @@ const HomePage: React.FC = () => {
           <div className={styles.navLinks}>
             <Link to="/" className={`${styles.navLink} ${styles.active}`}>首页</Link>
             <Link to="/courses" className={styles.navLink}>精品课程</Link>
-            <Link to="/exams" className={styles.navLink}>在线题库</Link>
+            <Link to="/questions" className={styles.navLink}>在线题库</Link>
             <Link to="/ai-assistant" className={styles.navLink}>智能助手</Link>
             <Link to="/community" className={styles.navLink}>学习社区</Link>
           </div>

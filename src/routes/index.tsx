@@ -20,6 +20,9 @@ import UserCenterPage from '../pages/User';
 import NotFoundPage from '../pages/Home';
 import AIAssistantPage from '../pages/AIAssistant';
 import CommunityPage from '../pages/Community';
+import PostDetailPage from '../pages/Community/PostDetail';
+import QuestionsPage from '../pages/Questions';
+import QuestionDetailPage from '../pages/Questions/QuestionDetail';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -44,9 +47,14 @@ const AppRoutes: React.FC = () => {
       <Route path="/exams/error-book" element={<ErrorBookPage />} />
       <Route path="/exams/:id/detail" element={<ExamDetailPage />} />
       
+      {/* 题库相关路由 - 注意：具体路径要放在参数路径之前 */}
+      <Route path="/questions" element={<QuestionsPage />} />
+      <Route path="/questions/wrong" element={<Navigate to="/exams/error-book" replace />} />
+      <Route path="/questions/:questionId" element={<QuestionDetailPage />} />
       
       {/* 社区相关路由 */}
       <Route path="/community" element={<CommunityPage />} />
+      <Route path="/community/post/:postId" element={<PostDetailPage />} />
       
       {/* AI助手路由 */}
       <Route path="/ai-assistant" element={<AIAssistantPage />} />

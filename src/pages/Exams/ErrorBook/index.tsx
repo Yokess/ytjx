@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Typography, 
   Card, 
@@ -19,9 +19,10 @@ import {
   BarChartOutlined,
   MoreOutlined,
   StarOutlined,
-  MessageOutlined
+  MessageOutlined,
+  ArrowLeftOutlined
 } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../../../components/layout/MainLayout';
 import styles from './ErrorBook.module.scss';
 
@@ -29,7 +30,7 @@ const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 // 侧边栏内容
-const SidebarContent = () => {
+const SidebarContent = ({ onBackClick }: { onBackClick: () => void }) => {
   return (
     <div className={styles.sidebar}>
       {/* 错题统计概览 */}
@@ -51,7 +52,7 @@ const SidebarContent = () => {
       <div className={styles.examCategories}>
         <h3>题库分类</h3>
         <div className={styles.categoryLinks}>
-          <Link to="/exams/smart" className={styles.categoryLink}>
+          <Link to="/questions" className={styles.categoryLink}>
             <BookOutlined />
             <span>智能练习</span>
           </Link>
@@ -132,6 +133,16 @@ const SidebarContent = () => {
           </div>
         </div>
       </div>
+
+      <Button 
+        type="primary" 
+        onClick={onBackClick}
+        icon={<ArrowLeftOutlined />}
+        className={styles.backButton}
+        style={{ marginTop: '20px', width: '100%' }}
+      >
+        返回
+      </Button>
     </div>
   );
 };
@@ -196,6 +207,19 @@ const ErrorBookPage: React.FC = () => {
   const [status, setStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // 处理返回按钮点击
+  const handleBackClick = () => {
+    // 根据referrer判断返回到哪个页面
+    const referrer = document.referrer;
+    if (referrer.includes('/questions')) {
+      navigate('/questions');
+    } else {
+      navigate('/exams');
+    }
+  };
 
   // 处理筛选
   const handleFilter = () => {
@@ -234,7 +258,7 @@ const ErrorBookPage: React.FC = () => {
   );
 
   return (
-    <MainLayout sidebarContent={<SidebarContent />}>
+    <MainLayout sidebarContent={<SidebarContent onBackClick={handleBackClick} />}>
       <div className={styles.errorBookContainer}>
         {/* 错题本标题和筛选 */}
         <div className={styles.headerSection}>
@@ -253,7 +277,7 @@ const ErrorBookPage: React.FC = () => {
             </Select>
             <Select
               defaultValue="all"
-              style={{ width: 150 }}
+              style={{ width: 120 }}
               onChange={(value) => setDifficulty(value)}
               className={styles.filterSelect}
             >
@@ -264,15 +288,15 @@ const ErrorBookPage: React.FC = () => {
             </Select>
             <Select
               defaultValue="all"
-              style={{ width: 150 }}
+              style={{ width: 120 }}
               onChange={(value) => setStatus(value)}
               className={styles.filterSelect}
             >
               <Option value="all">全部状态</Option>
-              <Option value="unmastered">未掌握</Option>
               <Option value="mastered">已掌握</Option>
+              <Option value="unmastered">未掌握</Option>
             </Select>
-            <Button type="primary" onClick={handleFilter} className={styles.filterButton}>
+            <Button type="primary" className={styles.filterButton} onClick={handleFilter}>
               筛选
             </Button>
           </div>

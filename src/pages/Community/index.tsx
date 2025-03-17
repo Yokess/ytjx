@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import MainLayout from '../../components/layout/MainLayout';
 import styles from './Community.module.scss';
+import { useNavigate, Link } from 'react-router-dom';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -75,6 +76,7 @@ const posts = [
     date: '2024-05-15',
     views: 5600,
     comments: 128,
+    likes: 320,
     isOfficial: true
   },
   {
@@ -90,6 +92,7 @@ const posts = [
     date: '2024-05-18',
     views: 342,
     comments: 16,
+    likes: 45,
     postTags: ['高等数学', '泰勒公式']
   },
   {
@@ -105,6 +108,7 @@ const posts = [
     date: '2024-05-10',
     views: 2100,
     comments: 86,
+    likes: 230,
     postTags: ['考研经验', '逆袭', '清华大学']
   },
   {
@@ -120,6 +124,7 @@ const posts = [
     date: '2024-05-12',
     views: 1500,
     comments: 42,
+    likes: 98,
     postTags: ['北京高校', '计算机专业', '分数线']
   },
   {
@@ -135,6 +140,7 @@ const posts = [
     date: '2024-05-16',
     views: 328,
     comments: 24,
+    likes: 36,
     postTags: ['英语学习', '北京', '2025考研']
   }
 ];
@@ -168,6 +174,7 @@ const userInfo = {
 const CommunityPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('latest');
   const [selectedSection, setSelectedSection] = useState('all');
+  const navigate = useNavigate();
 
   // 侧边栏内容
   const sidebarContent = (
@@ -327,51 +334,39 @@ const CommunityPage: React.FC = () => {
         {/* 帖子列表 */}
         <div className={styles.postsList}>
           {posts.map(post => (
-            <Card key={post.id} className={styles.postCard}>
-              <div className={styles.postTags}>
-                {post.tags.map((tag, index) => (
-                  <Tag key={index} color={post.tagColors[index]}>{tag}</Tag>
-                ))}
-              </div>
-              <div className={styles.postMain}>
+            <Card 
+              key={post.id} 
+              className={styles.postCard}
+              hoverable
+              onClick={() => navigate(`/community/post/${post.id}`)}
+            >
+              <div className={styles.postHeader}>
+                <div className={styles.postMeta}>
+                  <div className={styles.userInfo}>
+                    <Avatar src={post.author.avatar} />
+                    <Text strong>{post.author.name}</Text>
+                  </div>
+                  <div className={styles.postTime}>{post.date}</div>
+                </div>
+                <div className={styles.postTitle}>
+                  <Link to={`/community/post/${post.id}`}>{post.title}</Link>
+                </div>
                 <div className={styles.postContent}>
-                  <Title level={5} className={styles.postTitle}>
-                    <a href="#">{post.title}</a>
-                  </Title>
-                  {post.content && (
-                    <Paragraph ellipsis={{ rows: 2 }} className={styles.postExcerpt}>
-                      {post.content}
-                    </Paragraph>
-                  )}
-                  <div className={styles.postMeta}>
-                    <div className={styles.postAuthor}>
-                      <Avatar size="small" src={post.author.avatar} />
-                      <Text>{post.author.name}</Text>
-                    </div>
-                    <Text type="secondary">{post.date}</Text>
-                    <Text type="secondary">阅读 {post.views}</Text>
-                  </div>
-                </div>
-                <div className={styles.postStats}>
-                  <div className={styles.statItem}>
-                    <MessageOutlined />
-                    <span>{post.comments}</span>
-                  </div>
-                  <div className={styles.statItem}>
-                    <EyeOutlined />
-                    <span>{post.views}</span>
-                  </div>
+                  <Paragraph ellipsis={{ rows: 3 }}>{post.content}</Paragraph>
                 </div>
               </div>
-              {post.postTags && (
-                <div className={styles.postFooter}>
-                  <Space size={[0, 8]} wrap>
-                    {post.postTags.map((tag, index) => (
-                      <Tag key={index} color="blue">{`#${tag}`}</Tag>
-                    ))}
-                  </Space>
+              <div className={styles.postFooter}>
+                <div className={styles.postTags}>
+                  {post.tags.map((tag: string, index: number) => (
+                    <Tag key={index} color="#4f46e5">{tag}</Tag>
+                  ))}
                 </div>
-              )}
+                <div className={styles.postMeta}>
+                  <span><EyeOutlined /> {post.views}</span>
+                  <span><MessageOutlined /> {post.comments}</span>
+                  <span><LikeOutlined /> {post.likes || 0}</span>
+                </div>
+              </div>
             </Card>
           ))}
         </div>
