@@ -67,77 +67,104 @@
 // 进行中的考试样式
 .ongoingExam {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  border-radius: 8px;
+  background-color: #f9f9f9;
   padding: 16px;
-  background-color: #f0f5ff;
-
+  margin-bottom: 16px;
+  
   .examInfo {
+    width: 100%;
+  }
+  
+  .examTitle {
     display: flex;
     align-items: center;
-    flex: 1;
-
-    .examIcon {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      background-color: #e6f7ff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      color: #5B5CFF;
-      margin-right: 16px;
+    margin-bottom: 16px;
+    
+    h3 {
+      margin: 0;
+      margin-right: 12px;
+      font-size: 18px;
+      font-weight: 600;
     }
-
-    .examDetails {
-      flex: 1;
-
-      .examHeader {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-
-        h3 {
-          font-size: 16px;
-          font-weight: 600;
-          margin: 0;
-          margin-right: 12px;
-        }
-      }
-
-      .examStats {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 16px;
+  }
+  
+  .examProgress {
+    margin-bottom: 24px;
+    
+    .progressInfo {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      
+      span {
         font-size: 14px;
-        color: #666;
-
-        .progressWrapper {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-
-          span {
-            white-space: nowrap;
-          }
-
-          .progressBar {
-            width: 120px;
-            margin-bottom: 0;
-          }
+      }
+      
+      .progressValue {
+        font-weight: 600;
+        color: #ff4d4f;
+      }
+    }
+    
+    .progressBar {
+      :global {
+        .ant-progress-inner {
+          height: 8px;
         }
       }
     }
   }
-
-  .continueButton {
-    background-color: #5B5CFF;
-    border-color: #5B5CFF;
-    border-radius: 20px;
-    padding: 0 24px;
-    height: 40px;
+  
+  .examMetaContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+  }
+  
+  .examMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    margin-bottom: 16px;
+    
+    .metaItem {
+      display: flex;
+      flex-direction: column;
+      
+      .metaLabel {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 4px;
+      }
+      
+      .metaValue {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+      }
+    }
+  }
+  
+  .examActions {
+    margin-left: 24px;
+    
+    button {
+      min-width: 120px;
+      height: 40px;
+      
+      &:global(.ant-btn-primary) {
+        background-color: #5B5CFF;
+        border-color: #5B5CFF;
+        
+        &:hover {
+          background-color: #7879FF;
+          border-color: #7879FF;
+        }
+      }
+    }
   }
 }
 
@@ -268,30 +295,53 @@
     overflow: hidden;
 
     .historyTable {
+      :global {
+        .ant-table-thead > tr > th {
+          background-color: #fafafa;
+          font-weight: 600;
+        }
+        
+        .ant-table-tbody > tr:hover > td {
+          background-color: #f0f5ff;
+        }
+      }
+      
       .examTitle {
         font-weight: 500;
+        color: #333;
       }
-
+      
       .examDate {
         color: #666;
       }
-
+      
       .examScore {
         font-weight: 600;
-        color: #333;
+        color: #5B5CFF;
       }
-
+      
       .rankingTag {
-        font-size: 12px;
-        padding: 0 8px;
-        border-radius: 10px;
+        font-weight: 500;
       }
-
+      
       .detailButton {
         color: #5B5CFF;
-        padding: 0;
+        
+        &:hover {
+          color: #7879FF;
+        }
       }
     }
+  }
+}
+
+// 查看更多链接
+.viewMoreLink {
+  font-size: 14px;
+  color: #5B5CFF;
+  
+  &:hover {
+    color: #7879FF;
   }
 }
 

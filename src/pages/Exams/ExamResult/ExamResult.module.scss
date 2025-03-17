@@ -1,0 +1,358 @@
+// 考试结果页面样式
+.examResultContainer {
+  padding: 24px;
+  
+  // 加载和错误样式
+  .loadingContainer,
+  .errorContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    text-align: center;
+    
+    p {
+      margin-top: 16px;
+      margin-bottom: 24px;
+      color: #666;
+    }
+  }
+  
+  // 标题卡片
+  .resultTitleCard {
+    margin-bottom: 24px;
+    
+    .examTitle {
+      h4 {
+        margin-bottom: 8px;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      
+      .examMeta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        color: #666;
+        
+        span {
+          font-size: 14px;
+        }
+      }
+    }
+  }
+  
+  // 成绩总览卡片
+  .scoreOverviewCard {
+    margin-bottom: 24px;
+    
+    .scoreDisplay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      
+      .scoreBadge {
+        margin-bottom: 16px;
+        text-align: center;
+        
+        .scoreValue {
+          font-size: 48px;
+          font-weight: 600;
+          color: #5B5CFF;
+        }
+        
+        .scoreTotal {
+          font-size: 24px;
+          color: #999;
+        }
+      }
+      
+      .scoreProgress {
+        margin-top: 8px;
+      }
+    }
+    
+    // 统计格子
+    .statsGrid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      
+      .statItem {
+        display: flex;
+        align-items: center;
+        
+        .statIcon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          border-radius: 8px;
+          font-size: 20px;
+          margin-right: 16px;
+        }
+        
+        .statInfo {
+          flex: 1;
+          
+          .statValue {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 4px;
+            
+            .statPercent {
+              font-size: 14px;
+              font-weight: normal;
+              color: #999;
+              margin-left: 8px;
+            }
+          }
+        }
+      }
+    }
+    
+    // 总体评价
+    .overallEvaluation {
+      margin-top: 16px;
+      
+      h5 {
+        margin-bottom: 16px;
+      }
+      
+      .evaluationContent {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        
+        .evaluationTag {
+          font-size: 14px;
+          padding: 4px 12px;
+        }
+      }
+    }
+  }
+  
+  // 答题详情卡片
+  .questionDetailsCard {
+    margin-bottom: 24px;
+    
+    h5 {
+      margin-bottom: 16px;
+    }
+    
+    .questionTabs {
+      :global {
+        .ant-tabs-nav {
+          margin-bottom: 24px;
+        }
+      }
+    }
+    
+    .questionList {
+      .questionItem {
+        padding: 16px;
+        margin-bottom: 16px;
+        border: 1px solid #f0f0f0;
+        border-radius: 8px;
+        background-color: #FAFAFA;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+        
+        .questionHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          
+          .questionIndex {
+            display: flex;
+            align-items: center;
+            
+            span {
+              font-weight: 500;
+              margin-right: 12px;
+            }
+            
+            .questionStatus {
+              font-size: 12px;
+            }
+          }
+          
+          .questionScore {
+            font-size: 14px;
+            
+            span {
+              font-weight: 600;
+              color: #5B5CFF;
+            }
+          }
+        }
+        
+        .questionContent {
+          background-color: white;
+          padding: 16px;
+          border-radius: 8px;
+          
+          .answerComparison {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+            
+            .userAnswer,
+            .correctAnswerDisplay {
+              display: flex;
+              align-items: center;
+              
+              :global(.ant-typography) {
+                &.correctAnswer {
+                  color: #52c41a;
+                  font-weight: 500;
+                  margin-left: 8px;
+                }
+                
+                &.wrongAnswer {
+                  color: #ff4d4f;
+                  font-weight: 500;
+                  margin-left: 8px;
+                }
+              }
+            }
+          }
+          
+          .questionAnalysis {
+            padding: 12px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            
+            :global(.ant-typography) {
+              &:first-child {
+                margin-bottom: 8px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // 操作按钮
+  .actionButtons {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 32px;
+    margin-bottom: 16px;
+    
+    .actionButton {
+      min-width: 120px;
+      
+      :global(.anticon) {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+// 侧边栏样式
+.sidebar {
+  padding: 16px;
+  
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #333;
+  }
+  
+  // 考试分析
+  .examAnalysis {
+    margin-bottom: 32px;
+    
+    .analysisItem {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 16px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      .itemLabel {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 8px;
+      }
+      
+      .progressBar {
+        margin-bottom: 8px;
+      }
+      
+      .itemValue {
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+        text-align: right;
+      }
+    }
+  }
+  
+  // 建议改进
+  .improvementTips {
+    margin-bottom: 32px;
+    
+    .tipsList {
+      .tipItem {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+        
+        .tipDot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #5B5CFF;
+          margin-right: 12px;
+        }
+        
+        span {
+          font-size: 14px;
+          color: #333;
+        }
+      }
+    }
+  }
+  
+  // 相关考试
+  .relatedExams {
+    .examsList {
+      .examLink {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        span {
+          font-size: 14px;
+          color: #333;
+        }
+      }
+    }
+  }
+} 

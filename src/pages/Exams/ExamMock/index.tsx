@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Typography, 
   Card, 
@@ -10,7 +10,10 @@ import {
   Modal, 
   Space,
   Row,
-  Col
+  Col,
+  Spin,
+  Empty,
+  message
 } from 'antd';
 import { 
   ClockCircleOutlined, 
@@ -23,7 +26,13 @@ import {
   PlayCircleOutlined,
   StarFilled
 } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ExamStatus } from '../../../types/exam';
+import { 
+  getExams,
+  participateExam,
+  getExamResult
+} from '../../../api/examApi';
 import MainLayout from '../../../components/layout/MainLayout';
 import styles from './ExamMock.module.scss';
 
@@ -103,76 +112,87 @@ const SidebarContent = () => {
 };
 
 const ExamMockPage: React.FC = () => {
+  const navigate = useNavigate();
+  
+  // 数据加载状态
+  const [loading, setLoading] = useState(false);
+  const [exams, setExams] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [submitting, setSubmitting] = useState(false);
+  const [examResultData, setExamResultData] = useState<any>(null);
+  
   const [isModalVisible, setIsModalVisible] = useState(false);
-
-  // 模拟数据 - 进行中的考试
-  const ongoingExam = {
-    id: '1',
-    title: '2024考研数学全真模拟卷（二）',
-    remainingTime: '120分钟',
-    completedQuestions: 15,
-    totalQuestions: 45,
-    progress: 33
-  };
-
-  // 模拟数据 - 可参加的考试
-  const availableExams = [
-    {
-      id: '2',
-      title: '2024考研数学全真模拟卷（三）',
-      isNew: true,
-      duration: 180,
-      totalScore: 150,
-      questionCount: 45,
-      questionTypes: ['选择', '填空', '解答'],
-      difficulty: 4
-    },
-    {
-      id: '3',
-      title: '2023考研数学真题精选',
-      isNew: false,
-      duration: 180,
-      totalScore: 150,
-      questionCount: 40,
-      questionTypes: ['选择', '填空', '解答'],
-      difficulty: 4
+  const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
+  const [historyExamList, setHistoryExamList] = useState<any[]>([]);
+  
+  // 加载考试数据
+  useEffect(() => {
+    // 获取进行中和即将开始的考试
+    fetchOngoingExams();
+    
+    // 加载历史考试记录
+    loadHistoryExams();
+  }, []);
+  
+  // 获取进行中的考试
+  const fetchOngoingExams = async () => {
+    setLoading(true);
+    try {
+      const response = await getExams({ status: ExamStatus.ONGOING });
+      if (response.code === 200 && response.data) {
+        setExams(response.data.records || []);
+        setError(null);
+      } else {
+        setError(response.message || '获取考试列表失败');
+      }
+    } catch (err) {
+      setError('获取考试列表出错');
+      console.error('获取考试列表出错:', err);
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  // 模拟数据 - 历史考试记录
-  const historyExams = [
-    {
-      id: '4',
-      title: '2024考研数学全真模拟卷（一）',
-      date: '2024-03-15',
-      score: 89,
-      ranking: 'Top 15%'
-    },
-    {
-      id: '5',
-      title: '2023考研数学真题模拟',
-      date: '2024-03-10',
-      score: 92,
-      ranking: 'Top 10%'
-    }
-  ];
-
-  // 模拟数据 - 考试说明
-  const examInfo = {
-    title: '考试说明',
-    rules: [
-      '考试时间为180分钟，请合理分配时间',
-      '考试过程中请勿刷新页面或关闭浏览器',
-      '可以使用草稿纸进行演算',
-      '提交后将立即显示成绩和解析'
-    ],
-    distribution: [
-      { type: '选择题', count: 20, score: 100 },
-      { type: '填空题', count: 10, score: 20 },
-      { type: '解答题', count: 5, score: 30 }
-    ]
   };
-
+  
+  // 加载历史考试记录
+  const loadHistoryExams = async () => {
+    try {
+      // 获取已结束的考试
+      const response = await getExams({ status: ExamStatus.ENDED });
+      if (response.code === 200 && response.data) {
+        const endedExams = response.data.records || [];
+        const historyData = [];
+        
+        for (const exam of endedExams.slice(0, 3)) { // 取前3个
+          try {
+            const resultResponse = await getExamResult(exam.examId);
+            if (resultResponse.code === 200 && resultResponse.data) {
+              historyData.push({
+                id: exam.examId,
+                title: exam.name,
+                date: new Date(exam.endTime).toISOString().slice(0, 10),
+                score: resultResponse.data.score,
+                ranking: `Top ${Math.round(100 - (resultResponse.data.percentile || 0))}%`
+              });
+            }
+          } catch (err) {
+            console.error('获取考试结果失败', err);
+          }
+        }
+        
+        setHistoryExamList(historyData);
+      }
+    } catch (err) {
+      console.error('获取历史考试记录出错:', err);
+    }
+  };
+  
+  // 筛选进行中的考试
+  const ongoingExam = exams.find(exam => exam.status === ExamStatus.ONGOING);
+  
+  // 筛选即将开始的考试
+  const upcomingExams = exams.filter(exam => exam.status === ExamStatus.UPCOMING);
+  
   // 历史考试表格列
   const historyColumns = [
     {
@@ -205,20 +225,111 @@ const ExamMockPage: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_: any, record: any) => (
-        <Button type="link" className={styles.detailButton}>查看详情</Button>
+        <Link to={`/exams/result/${record.id}`}>
+          <Button 
+            type="link" 
+            className={styles.detailButton}
+          >
+            查看详情
+          </Button>
+        </Link>
       )
     }
   ];
-
+  
   // 显示考试说明弹窗
-  const showExamInfoModal = () => {
+  const showExamInfoModal = (examId: number) => {
+    setSelectedExamId(examId);
     setIsModalVisible(true);
   };
-
+  
   // 关闭考试说明弹窗
   const handleCancel = () => {
     setIsModalVisible(false);
   };
+  
+  // 参加考试
+  const handleParticipate = async () => {
+    if (!selectedExamId) return;
+    
+    setSubmitting(true);
+    try {
+      const response = await participateExam(selectedExamId);
+      if (response.code === 200) {
+        message.success('成功进入考试');
+        navigate(`/exams/detail/${selectedExamId}`);
+      } else {
+        message.error(response.message || '考试加入失败');
+      }
+    } catch (err) {
+      message.error('考试加入出错，请稍后重试');
+      console.error('参加考试出错:', err);
+    } finally {
+      setSubmitting(false);
+      setIsModalVisible(false);
+    }
+  };
+  
+  // 获取选中的考试
+  const selectedExam = selectedExamId ? exams.find(exam => exam.examId === selectedExamId) : null;
+  
+  // 格式化剩余时间
+  const formatRemainingTime = (exam: any) => {
+    // 检查考试状态，但不改变原始数据的状态属性
+    const now = new Date();
+    const startTime = new Date(exam.startTime);
+    const endTime = new Date(exam.endTime);
+    
+    // 获取实际状态
+    let actualStatus = exam.status;
+    if (now < startTime) {
+      actualStatus = ExamStatus.UPCOMING;
+    } else if (now > endTime) {
+      actualStatus = ExamStatus.ENDED;
+    } else {
+      actualStatus = ExamStatus.ONGOING;
+    }
+    
+    if (actualStatus !== ExamStatus.ONGOING) {
+      return actualStatus === ExamStatus.UPCOMING ? '未开始' : '已结束';
+    }
+    
+    const diffMs = endTime.getTime() - now.getTime();
+    
+    if (diffMs <= 0) {
+      return '已结束';
+    }
+    
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${diffHours}小时${diffMinutes}分钟`;
+  };
+  
+  // 计算进度
+  const calculateProgress = (exam: any) => {
+    if (!exam) return 0;
+    
+    const now = new Date();
+    const startTime = new Date(exam.startTime);
+    const endTime = new Date(exam.endTime);
+    
+    const totalDuration = endTime.getTime() - startTime.getTime();
+    const elapsedDuration = now.getTime() - startTime.getTime();
+    
+    return Math.round((elapsedDuration / totalDuration) * 100);
+  };
+  
+  if (loading && exams.length === 0) {
+    return (
+      <MainLayout sidebarContent={<SidebarContent />}>
+        <div className={styles.loadingContainer}>
+          <Spin size="large" />
+          <p>正在加载考试数据...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout sidebarContent={<SidebarContent />}>
@@ -231,7 +342,7 @@ const ExamMockPage: React.FC = () => {
             </div>
             <div className={styles.statInfo}>
               <h3>完成考试</h3>
-              <p>12场</p>
+              <p>{historyExamList.length}场</p>
             </div>
           </Card>
           <Card className={styles.statCard}>
@@ -240,7 +351,11 @@ const ExamMockPage: React.FC = () => {
             </div>
             <div className={styles.statInfo}>
               <h3>平均分数</h3>
-              <p>85.6</p>
+              <p>
+                {historyExamList.length > 0 
+                  ? (historyExamList.reduce((sum, exam) => sum + exam.score, 0) / historyExamList.length).toFixed(1) 
+                  : '0.0'}
+              </p>
             </div>
           </Card>
           <Card className={styles.statCard}>
@@ -248,164 +363,210 @@ const ExamMockPage: React.FC = () => {
               <ClockCircleOutlined />
             </div>
             <div className={styles.statInfo}>
-              <h3>累计用时</h3>
-              <p>36h</p>
+              <h3>可参加考试</h3>
+              <p>{upcomingExams.length + (ongoingExam ? 1 : 0)}场</p>
             </div>
           </Card>
         </div>
 
         {/* 进行中的考试 */}
-        <Card className={styles.sectionCard} title={
-          <div className={styles.cardTitle}>
-            <ClockCircleOutlined className={styles.titleIcon} />
-            <span>进行中的考试</span>
+        <Card className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <h2>进行中的考试</h2>
           </div>
-        }>
-          {ongoingExam && (
+          
+          {ongoingExam ? (
             <div className={styles.ongoingExam}>
               <div className={styles.examInfo}>
-                <div className={styles.examIcon}>
-                  <ClockCircleOutlined />
+                <div className={styles.examTitle}>
+                  <h3>{ongoingExam.name}</h3>
+                  <Tag color="green">进行中</Tag>
                 </div>
-                <div className={styles.examDetails}>
-                  <div className={styles.examHeader}>
-                    <h3>{ongoingExam.title}</h3>
-                    <Tag color="processing">进行中</Tag>
+                <div className={styles.examProgress}>
+                  <div className={styles.progressInfo}>
+                    <span>剩余时间</span>
+                    <span className={styles.progressValue}>{formatRemainingTime(ongoingExam)}</span>
                   </div>
-                  <div className={styles.examStats}>
-                    <span>剩余时间：{ongoingExam.remainingTime}</span>
-                    <span>已完成：{ongoingExam.completedQuestions}/{ongoingExam.totalQuestions}题</span>
-                    <div className={styles.progressWrapper}>
-                      <span>完成进度</span>
-                      <Progress 
-                        percent={ongoingExam.progress} 
-                        showInfo={false} 
-                        strokeColor="#5B5CFF" 
-                        trailColor="#e8e8e8"
-                        className={styles.progressBar}
-                      />
+                  <Progress 
+                    percent={calculateProgress(ongoingExam)} 
+                    showInfo={false} 
+                    strokeColor="#5B5CFF" 
+                    trailColor="#e8e8e8"
+                    className={styles.progressBar}
+                  />
+                </div>
+                
+                <div className={styles.examMetaContainer}>
+                  <div className={styles.examMeta}>
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>题目总数</span>
+                      <span className={styles.metaValue}>{ongoingExam.questionCount}题</span>
                     </div>
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>总分</span>
+                      <span className={styles.metaValue}>{ongoingExam.totalScore}分</span>
+                    </div>
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>时长</span>
+                      <span className={styles.metaValue}>{ongoingExam.duration}分钟</span>
+                    </div>
+                  </div>
+                  
+                  <div className={styles.examActions}>
+                    <Link to={`/exams/detail/${ongoingExam.examId}`}>
+                      <Button type="primary" icon={<PlayCircleOutlined />} size="large">
+                        继续考试
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>
-              <Link to={`/exams/${ongoingExam.id}/detail`}>
-                <Button type="primary" shape="round" className={styles.continueButton}>
-                  继续考试
-                </Button>
-              </Link>
             </div>
+          ) : (
+            <Empty description="当前没有进行中的考试" />
           )}
         </Card>
 
         {/* 可参加的考试 */}
-        <Card className={styles.sectionCard} title={
-          <div className={styles.cardTitle}>
-            <FileTextOutlined className={styles.titleIcon} />
-            <span>可参加的考试</span>
+        <Card className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <h2>可参加的考试</h2>
           </div>
-        }>
-          <div className={styles.availableExams}>
-            {availableExams.map(exam => (
-              <div key={exam.id} className={styles.examItem}>
-                <div className={styles.examInfo}>
-                  <div className={styles.examIcon} style={{ backgroundColor: exam.isNew ? '#f0f5ff' : '#f9f0ff' }}>
-                    <FileTextOutlined style={{ color: exam.isNew ? '#5B5CFF' : '#722ed1' }} />
-                  </div>
-                  <div className={styles.examDetails}>
-                    <div className={styles.examHeader}>
-                      <h3>{exam.title}</h3>
-                      {exam.isNew && <Tag color="success">新题</Tag>}
-                    </div>
-                    <div className={styles.examStats}>
-                      <span>时长：{exam.duration}分钟</span>
-                      <span>总分：{exam.totalScore}分</span>
-                      <span>题目数：{exam.questionCount}</span>
-                      <div className={styles.examTypes}>
-                        <span>题型：</span>
-                        {exam.questionTypes.map((type, index) => (
-                          <Tag key={index} color={
-                            index === 0 ? 'blue' : index === 1 ? 'pink' : 'orange'
-                          } className={styles.typeTag}>{type}</Tag>
-                        ))}
+          
+          {upcomingExams.length > 0 ? (
+            <div className={styles.availableExams}>
+              {upcomingExams.map(exam => (
+                <Card key={exam.examId} className={styles.examCard}>
+                  <div className={styles.examContent}>
+                    <div className={styles.examInfo}>
+                      <div className={styles.examHeader}>
+                        <h3>{exam.name}</h3>
+                        {new Date(exam.startTime).getTime() - new Date().getTime() < 1000 * 60 * 60 * 24 && (
+                          <Tag color="blue">新考试</Tag>
+                        )}
+                      </div>
+                      <div className={styles.examDescription}>
+                        {exam.description}
+                      </div>
+                      <div className={styles.examDetails}>
+                        <div className={styles.detailItem}>
+                          <ClockCircleOutlined />
+                          <span>{exam.duration}分钟</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                          <FileTextOutlined />
+                          <span>{exam.questionCount}题</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                          <StarFilled />
+                          <span>{exam.totalScore}分</span>
+                        </div>
                       </div>
                     </div>
+                    <div className={styles.examActions}>
+                      <Button 
+                        type="primary" 
+                        onClick={() => showExamInfoModal(exam.examId)}
+                      >
+                        参加考试
+                      </Button>
+                      <Button type="link" icon={<InfoCircleOutlined />}>
+                        查看详情
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className={styles.examActions}>
-                  <Button 
-                    type="text" 
-                    icon={<InfoCircleOutlined />} 
-                    onClick={showExamInfoModal}
-                    className={styles.infoButton}
-                  />
-                  <Link to={`/exams/${exam.id}/detail`}>
-                    <Button type="primary" shape="round" className={styles.startButton}>
-                      开始考试
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Empty description="当前没有可参加的考试" />
+          )}
         </Card>
 
         {/* 历史考试记录 */}
-        <div className={styles.historySection}>
+        <Card className={styles.sectionCard}>
           <div className={styles.sectionHeader}>
             <h2>历史考试记录</h2>
-            <Link to="/exams/history" className={styles.viewAllLink}>查看全部</Link>
+            <Link to="/exams/history" className={styles.viewMoreLink}>
+              查看更多
+            </Link>
           </div>
-          <Card className={styles.historyCard}>
+          
+          {historyExamList.length > 0 ? (
             <Table 
-              dataSource={historyExams} 
               columns={historyColumns} 
-              pagination={false}
+              dataSource={historyExamList} 
               rowKey="id"
+              pagination={false}
               className={styles.historyTable}
             />
-          </Card>
-        </div>
-
+          ) : (
+            <Empty description="暂无历史考试记录" />
+          )}
+        </Card>
+        
         {/* 考试说明弹窗 */}
-        <Modal
-          title={examInfo.title}
-          visible={isModalVisible}
-          onCancel={handleCancel}
-          footer={[
-            <Button key="cancel" onClick={handleCancel}>
-              取消
-            </Button>,
-            <Button key="start" type="primary" onClick={handleCancel}>
-              开始考试
-            </Button>,
-          ]}
-          width={600}
-          className={styles.examInfoModal}
-        >
-          <div className={styles.examRules}>
-            <div className={styles.rulesSection}>
-              <h4>考试须知</h4>
-              <ul>
-                {examInfo.rules.map((rule, index) => (
-                  <li key={index}>{rule}</li>
-                ))}
-              </ul>
+        {selectedExam && (
+          <Modal
+            title="考试说明"
+            open={isModalVisible}
+            onCancel={handleCancel}
+            footer={[
+              <Button key="back" onClick={handleCancel}>
+                取消
+              </Button>,
+              <Button 
+                key="submit" 
+                type="primary" 
+                loading={submitting}
+                onClick={handleParticipate}
+              >
+                开始考试
+              </Button>,
+            ]}
+            width={700}
+          >
+            <div className={styles.examInfoModal}>
+              <div className={styles.modalExamTitle}>
+                <h3>{selectedExam.name}</h3>
+                <Tag color="blue">即将开始</Tag>
+              </div>
+              
+              <div className={styles.examRules}>
+                <h4>考试规则</h4>
+                <ul>
+                  <li>考试时间为{selectedExam.duration}分钟，请合理分配时间</li>
+                  <li>考试过程中请勿刷新页面或关闭浏览器</li>
+                  <li>可以使用草稿纸进行演算</li>
+                  <li>提交后将立即显示成绩和解析</li>
+                </ul>
+              </div>
+              
+              <div className={styles.examDistribution}>
+                <h4>题目分布</h4>
+                <div className={styles.distributionItems}>
+                  <div className={styles.distributionItem}>
+                    <span className={styles.itemType}>总分</span>
+                    <span className={styles.itemValue}>{selectedExam.totalScore}分</span>
+                  </div>
+                  <div className={styles.distributionItem}>
+                    <span className={styles.itemType}>题目数量</span>
+                    <span className={styles.itemValue}>{selectedExam.questionCount}题</span>
+                  </div>
+                  <div className={styles.distributionItem}>
+                    <span className={styles.itemType}>考试时长</span>
+                    <span className={styles.itemValue}>{selectedExam.duration}分钟</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className={styles.examNote}>
+                <h4>注意事项</h4>
+                <p>请确保在考试期间网络畅通，建议使用电脑参加考试以获得最佳体验。祝您考试顺利！</p>
+              </div>
             </div>
-            <div className={styles.distributionSection}>
-              <h4>题型分布</h4>
-              <Row gutter={[16, 16]}>
-                {examInfo.distribution.map((item, index) => (
-                  <Col span={8} key={index}>
-                    <div className={styles.distributionItem}>
-                      <div className={styles.distributionType}>{item.type}</div>
-                      <div className={styles.distributionValue}>{item.count}题/{item.score}分</div>
-                    </div>
-                  </Col>
-                ))}
-              </Row>
-            </div>
-          </div>
-        </Modal>
+          </Modal>
+        )}
       </div>
     </MainLayout>
   );

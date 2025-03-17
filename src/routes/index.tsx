@@ -12,10 +12,10 @@ import RegisterPage from '../pages/Auth/Register';
 import CoursesListPage from '../pages/Courses/CoursesList';
 import CourseDetailPage from '../pages/Courses/CourseDetail';
 import VideoPlayerPage from '../pages/Courses/VideoPlayer';
-import ExamsListPage from '../pages/Exams/ExamsList';
 import ExamDetailPage from '../pages/Exams/ExamDetail';
 import ExamMockPage from '../pages/Exams/ExamMock';
 import ErrorBookPage from '../pages/Exams/ErrorBook';
+import ExamResultPage from '../pages/Exams/ExamResult';
 import UserCenterPage from '../pages/User';
 import NotFoundPage from '../pages/Home';
 import AIAssistantPage from '../pages/AIAssistant';
@@ -23,6 +23,9 @@ import CommunityPage from '../pages/Community';
 import PostDetailPage from '../pages/Community/PostDetail';
 import QuestionsPage from '../pages/Questions';
 import QuestionDetailPage from '../pages/Questions/QuestionDetail';
+
+// 临时重定向组件，用于重定向到首页
+const RedirectToHome = () => <Navigate to="/" replace />;
 
 const AppRoutes: React.FC = () => {
   return (
@@ -42,10 +45,11 @@ const AppRoutes: React.FC = () => {
       <Route path="/courses/:courseId/video/:videoId" element={<VideoPlayerPage />} />
       
       {/* 考试相关路由 */}
-      <Route path="/exams" element={<ExamsListPage />} />
       <Route path="/exams/mock" element={<ExamMockPage />} />
       <Route path="/exams/error-book" element={<ErrorBookPage />} />
-      <Route path="/exams/:id/detail" element={<ExamDetailPage />} />
+      <Route path="/exams/detail/:examId" element={<ExamDetailPage />} />
+      <Route path="/exams/result/:examId" element={<ExamResultPage />} />
+      <Route path="/exams/history" element={<ExamMockPage />} />
       
       {/* 题库相关路由 - 注意：具体路径要放在参数路径之前 */}
       <Route path="/questions" element={<QuestionsPage />} />
