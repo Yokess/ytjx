@@ -448,4 +448,247 @@
   &:hover {
     color: #4f46e5;
   }
+}
+
+// 添加新样式
+
+// 容器样式
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+// 面包屑容器
+.breadcrumbContainer {
+  margin-bottom: 16px;
+}
+
+// 返回按钮
+.backButton {
+  margin-bottom: 16px;
+}
+
+// 帖子卡片
+.postCard {
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+// 帖子头部
+.postHeader {
+  margin-bottom: 16px;
+  
+  h2 {
+    margin-bottom: 16px;
+  }
+}
+
+// 帖子元数据
+.postMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: #666;
+  
+  .metaItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+// 帖子内容
+.postContent {
+  font-size: 16px;
+  line-height: 1.7;
+  
+  h3 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  
+  p {
+    margin-bottom: 16px;
+  }
+  
+  ol, ul {
+    margin-left: 24px;
+    margin-bottom: 16px;
+  }
+  
+  li {
+    margin-bottom: 8px;
+  }
+}
+
+// 帖子操作
+.postActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  .leftActions {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .active {
+    color: #1890ff;
+  }
+}
+
+// 作者卡片
+.authorCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  
+  .authorInfo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .authorMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .authorName {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .authorTitle {
+    color: #666;
+    font-size: 14px;
+  }
+  
+  .authorStats {
+    display: flex;
+    gap: 16px;
+    color: #666;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+}
+
+// 评论卡片
+.commentsCard {
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  
+  .commentsTitle {
+    font-weight: 600;
+    margin-bottom: 0;
+  }
+}
+
+// 评论框
+.commentBox {
+  margin-top: 16px;
+  
+  .commentActions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+}
+
+// 回复框
+.replyBox {
+  margin-top: 16px;
+  
+  .replyingTo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .cancelReply {
+    padding: 0;
+  }
+}
+
+// 评论列表
+.commentsList {
+  margin-top: 16px;
+}
+
+// 评论项
+.commentItem {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+// 评论作者
+.commentAuthor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// 回复列表
+.repliesList {
+  margin-left: 40px;
+  margin-top: 8px;
+}
+
+// 回复项
+.replyItem {
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px dashed #f0f0f0;
+}
+
+// 回复目标信息
+.replyToInfo {
+  font-size: 12px;
+  color: #666;
+  margin-left: 8px;
+}
+
+// 点赞状态
+.liked {
+  color: #1890ff;
+}
+
+// 加载中状态
+.loadingComments {
+  margin-top: 16px;
+}
+
+// 无评论状态
+.noComments {
+  text-align: center;
+  padding: 40px 0;
+  color: #999;
+  
+  .noCommentsIcon {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+  
+  .noCommentsText {
+    font-size: 16px;
+  }
+}
+
+// 错误状态
+.errorState {
+  text-align: center;
+  padding: 60px 0;
 } 

@@ -19,7 +19,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, sidebarContent }) => 
       <Layout className={styles.contentLayout}>
         {/* 侧边栏 */}
         {sidebarContent && (
-          <Sider width={260} className={styles.sider}>
+          <Sider width={240} className={styles.sider}>
             {sidebarContent}
           </Sider>
         )}

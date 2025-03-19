@@ -349,4 +349,53 @@
   justify-content: center;
   gap: 8px;
   margin-top: 24px;
+}
+
+// 空状态样式
+.emptyPosts {
+  padding: 40px 0;
+  text-align: center;
+  
+  h4 {
+    margin-bottom: 12px;
+  }
+}
+
+// 创建帖子页样式
+.createPostCard {
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.createPostForm {
+  margin-top: 20px;
+  
+  .tagsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .tagInput {
+    width: 100px;
+  }
+  
+  .addTagBtn {
+    cursor: pointer;
+    background: #f0f2f5;
+  }
+  
+  .tagsHint {
+    color: #999;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  
+  .submitActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+  }
 } 

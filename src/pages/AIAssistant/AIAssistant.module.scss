@@ -8,6 +8,7 @@
   border-right: 1px solid #f0f0f0;
   display: flex;
   flex-direction: column;
+  width: 240px;
 
   .sidebarTitle {
     font-size: 16px;
@@ -36,51 +37,90 @@
     }
   }
 
+  .newChatButton {
+    margin-bottom: 16px;
+    height: 40px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(to right, #4f46e5, #8b5cf6);
+    border: none;
+    
+    &:hover {
+      background: linear-gradient(to right, darken(#4f46e5, 5%), darken(#8b5cf6, 5%));
+    }
+  }
+
   .historySection {
-    margin-top: auto;
-    margin-bottom: 20px;
+    flex: 1;
+    overflow-y: auto;
 
     .historyTitle {
-      font-size: 12px;
-      color: #999;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .historyList {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-
       .historyItem {
-        padding: 10px 12px;
+        padding: 8px 12px;
         border-radius: 8px;
-        color: #666;
-        font-size: 14px;
         cursor: pointer;
         transition: all 0.3s;
+        margin-bottom: 8px;
 
         &:hover {
           background-color: #f5f5f5;
+        }
+
+        .historyItemContent {
+          flex: 1;
+          
+          .historyItemTitle {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+          }
+
+          .historyItemDate {
+            font-size: 12px;
+            color: #999;
+          }
+        }
+
+        :global {
+          .ant-list-item-action {
+            margin: 0;
+          }
         }
       }
     }
   }
 
-  .newChatButton {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 1px solid #5B5CFF;
-    color: #5B5CFF;
-    border-radius: 8px;
-    height: 40px;
-    transition: all 0.3s;
+  .quickActions {
+    margin-top: 16px;
 
-    &:hover {
-      background-color: #f0f2ff;
+    h5 {
+      margin-bottom: 16px;
+      color: #666;
+    }
+
+    .quickAction {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+
+      &:hover {
+        transform: translateX(4px);
+      }
     }
   }
 }
@@ -89,11 +129,10 @@
 .chatContainer {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 150%;
+  overflow: hidden;
   background-color: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
 }
 
 // 聊天头部样式
@@ -315,5 +354,468 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+// 容器样式
+.container {
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.aiCard {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  height: calc(100vh - 120px);
+  overflow: hidden;
+
+  :global {
+    .ant-card-body {
+      height: 100%;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ant-tabs {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+
+      .ant-tabs-nav {
+        margin-bottom: 16px;
+        padding: 0 8px;
+      }
+
+      .ant-tabs-tab {
+        padding: 8px 16px;
+        transition: all 0.3s;
+        
+        &:hover {
+          color: #4f46e5;
+        }
+        
+        .anticon {
+          margin-right: 8px;
+        }
+      }
+
+      .ant-tabs-tab-active {
+        .ant-tabs-tab-btn {
+          color: #4f46e5;
+          font-weight: 500;
+        }
+      }
+
+      .ant-tabs-ink-bar {
+        background-color: #4f46e5;
+      }
+
+      .ant-tabs-content {
+        flex: 1;
+        height: calc(100% - 60px) !important;
+        overflow-y: auto;
+      }
+
+      .ant-tabs-tabpane {
+        height: 100%;
+        overflow-y: auto;
+      }
+    }
+  }
+}
+
+// 消息列表样式
+.messageList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background-color: #f9f9fb;
+  margin-bottom: 0;
+  min-height: 300px;
+}
+
+.message {
+  margin-bottom: 20px;
+  display: flex;
+  
+  &.user {
+    justify-content: flex-end;
+    
+    .messageContent {
+      background-color: #4f46e5;
+      color: white;
+      border-radius: 12px 12px 0 12px;
+      max-width: 80%;
+      padding: 12px 16px;
+    }
+  }
+  
+  &.assistant {
+    justify-content: flex-start;
+    
+    .messageContent {
+      background-color: white;
+      border-radius: 12px 12px 12px 0;
+      border: 1px solid #eaeaea;
+      max-width: 80%;
+      padding: 12px 16px;
+    }
+  }
+}
+
+.messageContent {
+  padding: 12px 16px;
+  max-width: 80%;
+
+  :global {
+    .ant-typography {
+      margin-bottom: 0;
+      white-space: pre-wrap;
+    }
+  }
+}
+
+.inputArea {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  margin-top: auto;
+
+  .roleSelect {
+    width: 200px;
+  }
+
+  :global {
+    .ant-input {
+      border-radius: 8px;
+      resize: none;
+    }
+
+    .ant-btn {
+      height: 40px;
+      border-radius: 8px;
+    }
+  }
+}
+
+// 表单样式
+.formContainer {
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+
+  :global {
+    .ant-form-item {
+      margin-bottom: 24px;
+    }
+
+    .ant-input,
+    .ant-select,
+    .ant-input-number,
+    .ant-picker {
+      border-radius: 8px;
+    }
+
+    .ant-upload-drag {
+      border-radius: 8px;
+    }
+  }
+}
+
+// 上传组件样式
+.uploadArea {
+  :global {
+    .ant-upload-drag {
+      background: #f9fafb;
+      border: 2px dashed #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      transition: all 0.3s;
+
+      &:hover {
+        border-color: #4f46e5;
+      }
+    }
+
+    .ant-upload-text {
+      color: #4b5563;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+
+    .ant-upload-hint {
+      color: #9ca3af;
+    }
+  }
+}
+
+// 标签样式
+.tagCloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+
+  :global {
+    .ant-tag {
+      padding: 4px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+  }
+}
+
+// 加载状态样式
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+// 添加 Markdown 样式
+.markdown {
+  width: 100%;
+  line-height: 1.6;
+  font-size: 14px;
+  color: #333;
+
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 16px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: #111;
+  }
+
+  h1 {
+    font-size: 26px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+  }
+
+  h2 {
+    font-size: 22px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f3f3f3;
+  }
+
+  h3 {
+    font-size: 18px;
+  }
+
+  h4 {
+    font-size: 16px;
+  }
+
+  h5, h6 {
+    font-size: 14px;
+  }
+
+  p {
+    margin-bottom: 16px;
+    line-height: 1.7;
+  }
+
+  ol, ul {
+    padding-left: 24px;
+    margin-bottom: 16px;
+  }
+
+  ul {
+    list-style-type: disc;
+  }
+
+  ol {
+    list-style-type: decimal;
+  }
+
+  li {
+    margin-bottom: 4px;
+
+    p {
+      margin-bottom: 8px;
+    }
+  }
+
+  pre {
+    margin-bottom: 16px;
+    padding: 16px;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    background-color: #f6f8fa;
+    border-radius: 8px;
+  }
+
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    padding: 0.2em 0.4em;
+    margin: 0;
+    font-size: 85%;
+    background-color: rgba(27, 31, 35, 0.05);
+    border-radius: 3px;
+  }
+
+  pre code {
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: 100%;
+    word-break: normal;
+    white-space: pre;
+  }
+
+  blockquote {
+    margin: 0 0 16px;
+    padding: 0 16px;
+    color: #6a737d;
+    border-left: 4px solid #dfe2e5;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 16px;
+    display: block;
+    overflow-x: auto;
+  }
+
+  table th, table td {
+    padding: 6px 13px;
+    border: 1px solid #dfe2e5;
+  }
+
+  table th {
+    font-weight: 600;
+    background-color: #f6f8fa;
+  }
+
+  table tr {
+    background-color: #fff;
+    border-top: 1px solid #c6cbd1;
+  }
+
+  table tr:nth-child(2n) {
+    background-color: #f6f8fa;
+  }
+
+  img {
+    max-width: 100%;
+    box-sizing: content-box;
+    background-color: #fff;
+    margin-bottom: 16px;
+    border-radius: 4px;
+  }
+
+  hr {
+    height: 0.25em;
+    padding: 0;
+    margin: 24px 0;
+    background-color: #e1e4e8;
+    border: 0;
+  }
+
+  a {
+    color: #0366d6;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// 文生图样式
+.generatingStatus {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #f9f9fb;
+  border-radius: 8px;
+}
+
+.generatedImageContainer {
+  margin-top: 20px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.generatedImage {
+  position: relative;
+  margin: 10px 0;
+  
+  img {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    
+    &:hover {
+      transform: scale(1.02);
+    }
+  }
+  
+  .imageControls {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    gap: 8px;
+    
+    button {
+      padding: 4px 12px;
+      border-radius: 4px;
+    }
+  }
+}
+
+.imageInfo {
+  padding: 16px;
+  
+  h5 {
+    margin-bottom: 12px;
+    color: #333;
+  }
+  
+  p {
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 14px;
+    word-break: break-all;
+  }
+}
+
+// 消息中的图片样式
+.messageImage {
+  max-width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
+  cursor: pointer;
+  
+  &:hover {
+    transform: scale(1.02);
+    transition: transform 0.3s ease;
   }
 } 

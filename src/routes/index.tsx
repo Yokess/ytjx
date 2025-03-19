@@ -21,6 +21,7 @@ import NotFoundPage from '../pages/Home';
 import AIAssistantPage from '../pages/AIAssistant';
 import CommunityPage from '../pages/Community';
 import PostDetailPage from '../pages/Community/PostDetail';
+import CreatePostPage from '../pages/Community/CreatePost';
 import QuestionsPage from '../pages/Questions';
 import QuestionDetailPage from '../pages/Questions/QuestionDetail';
 
@@ -59,6 +60,7 @@ const AppRoutes: React.FC = () => {
       {/* 社区相关路由 */}
       <Route path="/community" element={<CommunityPage />} />
       <Route path="/community/post/:postId" element={<PostDetailPage />} />
+      <Route path="/community/create" element={<CreatePostPage />} />
       
       {/* AI助手路由 */}
       <Route path="/ai-assistant" element={<AIAssistantPage />} />

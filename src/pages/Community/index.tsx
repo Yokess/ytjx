@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Typography, Input, Button, Select, Tag, Avatar, Tabs, Card, Skeleton, Divider, Badge, Space } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Typography, Input, Button, Select, Tag, Avatar, Tabs, Card, Skeleton, Divider, Badge, Space, message, Pagination } from 'antd';
 import { 
   SearchOutlined, 
   PlusOutlined, 
@@ -14,6 +14,8 @@ import {
 import MainLayout from '../../components/layout/MainLayout';
 import styles from './Community.module.scss';
 import { useNavigate, Link } from 'react-router-dom';
+import { getColumns, getPosts, getSections, getHotTags, getCommunityUserInfo } from '../../api/communityApi';
+import type { Post, Section, Column, UserInfo } from '../../types/community';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -174,37 +176,124 @@ const userInfo = {
 const CommunityPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('latest');
   const [selectedSection, setSelectedSection] = useState('all');
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const navigate = useNavigate();
-
+  
+  // 状态管理
+  const [loading, setLoading] = useState(true);
+  const [columns, setColumns] = useState<Column[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [totalPosts, setTotalPosts] = useState(0);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [hotTags, setHotTags] = useState<string[]>([]);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  
+  // 加载数据
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setLoading(true);
+      try {
+        // 并行请求数据
+        const [columnsRes, sectionsRes, hotTagsRes, userInfoRes] = await Promise.all([
+          getColumns(),
+          getSections(),
+          getHotTags(),
+          getCommunityUserInfo()
+        ]);
+        
+        setColumns(columnsRes.data.columns);
+        setSections(sectionsRes.data);
+        setHotTags(hotTagsRes.data);
+        setUserInfo(userInfoRes.data);
+      } catch (error) {
+        console.error('获取社区数据失败', error);
+        message.error('获取社区数据失败，请稍后重试');
+      }
+      setLoading(false);
+    };
+    
+    fetchInitialData();
+  }, []);
+  
+  // 加载帖子数据
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true);
+      try {
+        const res = await getPosts({
+          page,
+          pageSize,
+          sortBy: activeTab as 'latest' | 'hot' | 'featured',
+          section: selectedSection !== 'all' ? selectedSection : undefined,
+          keyword: searchKeyword || undefined
+        });
+        
+        setPosts(res.data.posts);
+        setTotalPosts(res.data.total);
+      } catch (error) {
+        console.error('获取帖子列表失败', error);
+        message.error('获取帖子列表失败，请稍后重试');
+      }
+      setLoading(false);
+    };
+    
+    fetchPosts();
+  }, [page, pageSize, activeTab, selectedSection, searchKeyword]);
+  
+  // 处理搜索
+  const handleSearch = (value: string) => {
+    setSearchKeyword(value);
+    setPage(1); // 重置为第一页
+  };
+  
+  // 处理发布帖子
+  const handleCreatePost = () => {
+    navigate('/community/create');
+  };
+  
+  // 处理分页变化
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
   // 侧边栏内容
   const sidebarContent = (
     <div className={styles.sidebar}>
       {/* 用户信息卡片 */}
       <Card className={styles.userCard}>
-        <div className={styles.userInfo}>
-          <Avatar size={64} src={userInfo.avatar} />
-          <div className={styles.userMeta}>
-            <Text strong className={styles.userName}>{userInfo.name}</Text>
-            <Text type="secondary">积分：{userInfo.points}</Text>
-            <div className={styles.userTags}>
-              <Tag color="blue">{userInfo.major}</Tag>
+        {loading || !userInfo ? (
+          <Skeleton avatar active paragraph={{ rows: 3 }} />
+        ) : (
+          <>
+            <div className={styles.userInfo}>
+              <Avatar size={64} src={userInfo.avatar} />
+              <div className={styles.userMeta}>
+                <Text strong className={styles.userName}>{userInfo.name}</Text>
+                <Text type="secondary">积分：{userInfo.points}</Text>
+                <div className={styles.userTags}>
+                  <Tag color="blue">{userInfo.major}</Tag>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className={styles.userStats}>
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>{userInfo.posts}</div>
-            <div className={styles.statLabel}>发帖</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>{userInfo.replies}</div>
-            <div className={styles.statLabel}>回复</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue}>{userInfo.favorites}</div>
-            <div className={styles.statLabel}>收藏</div>
-          </div>
-        </div>
+            <div className={styles.userStats}>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>{userInfo.posts}</div>
+                <div className={styles.statLabel}>发帖</div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>{userInfo.replies}</div>
+                <div className={styles.statLabel}>回复</div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statValue}>{userInfo.favorites}</div>
+                <div className={styles.statLabel}>收藏</div>
+              </div>
+            </div>
+          </>
+        )}
       </Card>
 
       {/* 社区导航 */}
@@ -213,21 +302,48 @@ const CommunityPage: React.FC = () => {
         className={styles.sectionCard}
         headStyle={{ background: 'linear-gradient(to right, #4f46e5, #8b5cf6)', color: 'white' }}
       >
-        <div className={styles.sectionList}>
-          {sections.map((section, index) => (
+        {loading ? (
+          <Skeleton active paragraph={{ rows: 5 }} />
+        ) : (
+          <div className={styles.sectionList}>
             <div 
-              key={index} 
               className={styles.sectionItem}
-              onClick={() => setSelectedSection(section.name)}
+              onClick={() => setSelectedSection('all')}
             >
               <div className={styles.sectionInfo}>
-                {section.icon}
-                <Text strong>{section.name}</Text>
+                <FireOutlined />
+                <Text strong>全部帖子</Text>
               </div>
-              <Tag color={section.color}>{section.count}</Tag>
+              <Tag color="orange">全部</Tag>
             </div>
-          ))}
-        </div>
+            {sections.map((section, index) => {
+              // 将图标名称映射到对应的图标组件
+              let IconComponent;
+              switch(section.icon) {
+                case 'MessageOutlined': IconComponent = MessageOutlined; break;
+                case 'StarOutlined': IconComponent = StarOutlined; break;
+                case 'LikeOutlined': IconComponent = LikeOutlined; break;
+                case 'TeamOutlined': IconComponent = TeamOutlined; break;
+                case 'NotificationOutlined': IconComponent = NotificationOutlined; break;
+                default: IconComponent = MessageOutlined;
+              }
+              
+              return (
+                <div 
+                  key={index} 
+                  className={styles.sectionItem}
+                  onClick={() => setSelectedSection(section.name)}
+                >
+                  <div className={styles.sectionInfo}>
+                    <IconComponent />
+                    <Text strong>{section.name}</Text>
+                  </div>
+                  <Tag color={section.color}>{section.count}</Tag>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       {/* 热门标签 */}
@@ -236,17 +352,22 @@ const CommunityPage: React.FC = () => {
         className={styles.tagsCard}
         headStyle={{ background: 'linear-gradient(to right, #4f46e5, #8b5cf6)', color: 'white' }}
       >
-        <div className={styles.tagCloud}>
-          {hotTags.map((tag, index) => (
-            <Tag 
-              key={index} 
-              className={styles.tagItem}
-              color={index % 2 === 0 ? undefined : 'blue'}
-            >
-              #{tag}
-            </Tag>
-          ))}
-        </div>
+        {loading ? (
+          <Skeleton active paragraph={{ rows: 3 }} />
+        ) : (
+          <div className={styles.tagCloud}>
+            {hotTags.map((tag, index) => (
+              <Tag 
+                key={index} 
+                className={styles.tagItem}
+                color={index % 2 === 0 ? undefined : 'blue'}
+                onClick={() => handleSearch(tag)}
+              >
+                #{tag}
+              </Tag>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );
@@ -261,12 +382,16 @@ const CommunityPage: React.FC = () => {
           <Text type="secondary">与全国考研学子一起交流学习经验</Text>
         </div>
         <div className={styles.headerActions}>
-          <Input 
+          <Input.Search 
             placeholder="搜索帖子..." 
-            prefix={<SearchOutlined />} 
+            onSearch={handleSearch}
             className={styles.searchInput} 
           />
-          <Button type="primary" icon={<PlusOutlined />}>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />}
+            onClick={handleCreatePost}
+          >
             发布帖子
           </Button>
         </div>
@@ -276,36 +401,51 @@ const CommunityPage: React.FC = () => {
       <div className={styles.columnsSection}>
         <div className={styles.sectionHeader}>
           <Title level={4}>精选专栏</Title>
-          <a href="#" className={styles.viewMore}>查看全部</a>
+          <Link to="/community/columns" className={styles.viewMore}>查看全部</Link>
         </div>
-        <div className={styles.columnsList}>
-          {columns.map(column => (
-            <Card key={column.id} className={styles.columnCard}>
-              <div 
-                className={styles.columnCover} 
-                style={{ background: column.cover }}
+        {loading ? (
+          <div className={styles.columnsList}>
+            {[1, 2, 3].map(i => (
+              <Card key={i} className={styles.columnCard}>
+                <Skeleton active avatar paragraph={{ rows: 3 }} />
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.columnsList}>
+            {columns.map(column => (
+              <Card 
+                key={column.id} 
+                className={styles.columnCard}
+                hoverable
+                onClick={() => navigate(`/community/column/${column.id}`)}
               >
-                <div className={styles.columnTitle}>{column.title}</div>
-              </div>
-              <div className={styles.columnContent}>
-                <div className={styles.columnAuthor}>
-                  <Avatar src={column.author.avatar} />
-                  <div>
-                    <Text strong>{column.author.name}</Text>
-                    <div className={styles.authorTitle}>{column.author.title}</div>
+                <div 
+                  className={styles.columnCover} 
+                  style={{ background: column.cover }}
+                >
+                  <div className={styles.columnTitle}>{column.title}</div>
+                </div>
+                <div className={styles.columnContent}>
+                  <div className={styles.columnAuthor}>
+                    <Avatar src={column.author.avatar} />
+                    <div>
+                      <Text strong>{column.author.name}</Text>
+                      <div className={styles.authorTitle}>{column.author.title}</div>
+                    </div>
+                  </div>
+                  <Paragraph ellipsis={{ rows: 2 }} className={styles.columnDesc}>
+                    {column.description}
+                  </Paragraph>
+                  <div className={styles.columnMeta}>
+                    <Text type="secondary">已更新：{column.articles}篇</Text>
+                    <Text type="secondary">阅读：{column.views}</Text>
                   </div>
                 </div>
-                <Paragraph ellipsis={{ rows: 2 }} className={styles.columnDesc}>
-                  {column.description}
-                </Paragraph>
-                <div className={styles.columnMeta}>
-                  <Text type="secondary">已更新：{column.articles}篇</Text>
-                  <Text type="secondary">阅读：{column.views}</Text>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 帖子列表 */}
@@ -321,7 +461,8 @@ const CommunityPage: React.FC = () => {
             <TabPane tab="精华内容" key="featured" />
           </Tabs>
           <Select 
-            defaultValue="all" 
+            value={selectedSection} 
+            onChange={setSelectedSection}
             className={styles.sectionSelect}
           >
             <Option value="all">全部板块</Option>
@@ -332,52 +473,70 @@ const CommunityPage: React.FC = () => {
         </div>
 
         {/* 帖子列表 */}
-        <div className={styles.postsList}>
-          {posts.map(post => (
-            <Card 
-              key={post.id} 
-              className={styles.postCard}
-              hoverable
-              onClick={() => navigate(`/community/post/${post.id}`)}
-            >
-              <div className={styles.postHeader}>
-                <div className={styles.postMeta}>
-                  <div className={styles.userInfo}>
-                    <Avatar src={post.author.avatar} />
-                    <Text strong>{post.author.name}</Text>
+        {loading ? (
+          <div className={styles.postsList}>
+            {[1, 2, 3].map(i => (
+              <Card key={i} className={styles.postCard}>
+                <Skeleton active avatar paragraph={{ rows: 4 }} />
+              </Card>
+            ))}
+          </div>
+        ) : posts.length === 0 ? (
+          <div className={styles.emptyPosts}>
+            <Title level={4}>暂无相关帖子</Title>
+            <Text type="secondary">换个筛选条件试试，或者发布一个新帖子吧！</Text>
+          </div>
+        ) : (
+          <div className={styles.postsList}>
+            {posts.map(post => (
+              <Card 
+                key={post.id} 
+                className={styles.postCard}
+                hoverable
+                onClick={() => navigate(`/community/post/${post.id}`)}
+              >
+                <div className={styles.postHeader}>
+                  <div className={styles.postMeta}>
+                    <div className={styles.userInfo}>
+                      <Avatar src={post.author.avatar} />
+                      <Text strong>{post.author.name}</Text>
+                    </div>
+                    <div className={styles.postTime}>{post.date}</div>
                   </div>
-                  <div className={styles.postTime}>{post.date}</div>
+                  <div className={styles.postTitle}>
+                    <Link to={`/community/post/${post.id}`}>{post.title}</Link>
+                  </div>
+                  <div className={styles.postContent}>
+                    <Paragraph ellipsis={{ rows: 2 }}>{post.content}</Paragraph>
+                  </div>
                 </div>
-                <div className={styles.postTitle}>
-                  <Link to={`/community/post/${post.id}`}>{post.title}</Link>
+                <div className={styles.postFooter}>
+                  <div className={styles.postTags}>
+                    {post.tags.map((tag: string, index: number) => (
+                      <Tag key={index} color={post.tagColors?.[index] || '#4f46e5'}>{tag}</Tag>
+                    ))}
+                  </div>
+                  <div className={styles.postMeta}>
+                    <span><EyeOutlined /> {post.views}</span>
+                    <span><MessageOutlined /> {post.comments}</span>
+                    <span><LikeOutlined /> {post.likes || 0}</span>
+                  </div>
                 </div>
-                <div className={styles.postContent}>
-                  <Paragraph ellipsis={{ rows: 3 }}>{post.content}</Paragraph>
-                </div>
-              </div>
-              <div className={styles.postFooter}>
-                <div className={styles.postTags}>
-                  {post.tags.map((tag: string, index: number) => (
-                    <Tag key={index} color="#4f46e5">{tag}</Tag>
-                  ))}
-                </div>
-                <div className={styles.postMeta}>
-                  <span><EyeOutlined /> {post.views}</span>
-                  <span><MessageOutlined /> {post.comments}</span>
-                  <span><LikeOutlined /> {post.likes || 0}</span>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* 分页 */}
         <div className={styles.pagination}>
-          <Button type="text">上一页</Button>
-          <Button type="primary">1</Button>
-          <Button type="text">2</Button>
-          <Button type="text">3</Button>
-          <Button type="text">下一页</Button>
+          <Pagination 
+            current={page}
+            pageSize={pageSize}
+            total={totalPosts}
+            onChange={handlePageChange}
+            showSizeChanger={false}
+            showQuickJumper
+          />
         </div>
       </div>
     </div>
