@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 // 布局组件
@@ -25,8 +25,14 @@ import CreatePostPage from '../pages/Community/CreatePost';
 import QuestionsPage from '../pages/Questions';
 import QuestionDetailPage from '../pages/Questions/QuestionDetail';
 
+// Admin模块路由
+import adminRoutes from '../pages/Admin/routes';
+
 // 临时重定向组件，用于重定向到首页
 const RedirectToHome = () => <Navigate to="/" replace />;
+
+// 加载中组件
+const LoadingFallback = () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>加载中...</div>;
 
 const AppRoutes: React.FC = () => {
   return (
@@ -67,6 +73,30 @@ const AppRoutes: React.FC = () => {
       
       {/* 用户中心路由 */}
       <Route path="/user" element={<UserCenterPage />} />
+      
+      {/* 管理后台路由 */}
+      <Route path="/admin/*" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="" element={adminRoutes[0].element} />
+            {adminRoutes.slice(1).map((route, index) => (
+              <Route
+                key={index}
+                path={route.path?.replace('/admin/', '') || ''}
+                element={route.element}
+              >
+                {route.children?.map((childRoute, childIndex) => (
+                  <Route
+                    key={`${index}-${childIndex}`}
+                    path={childRoute.path}
+                    element={childRoute.element}
+                  />
+                ))}
+              </Route>
+            ))}
+          </Routes>
+        </Suspense>
+      } />
       
       {/* 404页面 */}
       <Route path="/404" element={<NotFoundPage />} />

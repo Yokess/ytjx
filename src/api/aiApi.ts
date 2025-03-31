@@ -260,11 +260,24 @@ export const generateImage = async (params: TextToImageParams): Promise<TextToIm
       enhance_prompt: params.enhance_prompt || false
     });
     
+    // 处理提示词优化
+    let finalPrompt = params.description;
+    if (params.enhance_prompt) {
+      console.log("启用提示词优化，正在调用Deepseek优化提示词...");
+      try {
+        finalPrompt = await enhancePrompt(params.description);
+        console.log("提示词优化成功:", finalPrompt);
+      } catch (error) {
+        console.error("提示词优化失败，将使用原始提示词:", error);
+        finalPrompt = params.description;
+      }
+    }
+    
     // 处理Stable Diffusion API请求
     const apiUrl = 'http://127.0.0.1:7860/sdapi/v1/txt2img';
     
     // 清理提示词中的反引号
-    const cleanPrompt = params.description.replace(/`/g, '');
+    const cleanPrompt = finalPrompt.replace(/`/g, '');
     
     const response = await fetch(apiUrl, {
       method: 'POST',
