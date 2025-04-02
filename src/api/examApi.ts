@@ -100,7 +100,7 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
   1001: [
     {
       questionId: 2001,
-      type: QuestionType.SINGLE_CHOICE,
+      type: 0,
       content: '以下哪项不是操作系统的基本功能？',
       options: [
         { id: 'A', content: '处理机管理' },
@@ -112,7 +112,7 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
     },
     {
       questionId: 2002,
-      type: QuestionType.SINGLE_CHOICE,
+      type: 0,
       content: '下列关于数据结构的叙述中，错误的是：',
       options: [
         { id: 'A', content: '栈是一种后进先出的线性结构' },
@@ -124,7 +124,7 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
     },
     {
       questionId: 2003,
-      type: QuestionType.MULTIPLE_CHOICE,
+      type: 1,
       content: '下列哪些算法的平均时间复杂度为O(nlogn)？',
       options: [
         { id: 'A', content: '快速排序' },
@@ -136,13 +136,13 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
     },
     {
       questionId: 2004,
-      type: QuestionType.JUDGE,
+      type: 3,
       content: '在TCP/IP协议中，IP地址的长度为4个字节，共32位。',
       score: 2
     },
     {
       questionId: 2005,
-      type: QuestionType.FILL_BLANK,
+      type: 2,
       content: '在计算机网络中，负责将域名转换为IP地址的协议是____。',
       score: 3
     }
@@ -150,7 +150,7 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
   1002: [
     {
       questionId: 2006,
-      type: QuestionType.SINGLE_CHOICE,
+      type: 0,
       content: '马克思主义认为，物质和意识的关系问题是：',
       options: [
         { id: 'A', content: '哲学的基本问题' },
@@ -162,7 +162,7 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
     },
     {
       questionId: 2007,
-      type: QuestionType.SINGLE_CHOICE,
+      type: 0,
       content: '中国共产党成立的时间是：',
       options: [
         { id: 'A', content: '1919年5月4日' },
@@ -174,7 +174,7 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
     },
     {
       questionId: 2008,
-      type: QuestionType.SINGLE_CHOICE,
+      type: 0,
       content: '毛泽东思想形成的标志是：',
       options: [
         { id: 'A', content: '《中国社会各阶级的分析》' },
@@ -186,7 +186,7 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
     },
     {
       questionId: 2009,
-      type: QuestionType.MULTIPLE_CHOICE,
+      type: 1,
       content: '习近平新时代中国特色社会主义思想的核心要义包括：',
       options: [
         { id: 'A', content: '坚持和发展中国特色社会主义' },
@@ -198,7 +198,7 @@ const mockExamQuestions: { [key: number]: ExamQuestion[] } = {
     },
     {
       questionId: 2010,
-      type: QuestionType.JUDGE,
+      type: 3,
       content: '改革开放是中国特色社会主义事业的重要组成部分。',
       score: 2
     }

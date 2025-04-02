@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Checkbox, message, Tabs, Select } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Checkbox, message, Tabs, Select, Radio, Divider } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined, AimOutlined, BookOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../hooks/useAuth';
 import styles from './Register.module.scss';
 
@@ -30,18 +30,44 @@ const RegisterPage: React.FC = () => {
   // 处理注册表单提交
   const handleSubmit = async (values: any) => {
     try {
-      const success = await register({
+      const registerData: any = {
         username: values.username,
         password: values.password,
-        email: values.email
-      });
+        gender: values.gender,
+        major: values.major,
+        target: values.target
+      };
+
+      // 根据不同的注册方式添加对应的字段
+      if (values.email) {
+        registerData.email = values.email;
+      } else if (values.phone) {
+        registerData.phone = values.prefix ? `${values.prefix}${values.phone}` : values.phone;
+      }
+
+      console.log('注册提交数据:', registerData);
+
+      // 调用注册接口
+      const result = await register(registerData);
       
-      if (success) {
-        message.success('注册成功，请登录');
-        navigate('/login');
+      console.log('注册结果详情:', result);
+      
+      if (result) {
+        message.success('注册成功！即将为您跳转到首页');
+        
+        // 添加延迟以确保状态更新完成
+        setTimeout(() => {
+          // 直接导航到首页
+          navigate('/');
+          console.log('已执行导航操作');
+        }, 1500);
+      } else {
+        console.error('注册成功但未返回用户数据');
+        message.error('注册过程中出现问题，请重试');
       }
     } catch (error) {
       console.error('注册错误:', error);
+      message.error('注册失败，请稍后再试');
     }
   };
 
@@ -72,6 +98,44 @@ const RegisterPage: React.FC = () => {
     return Promise.reject(new Error('请输入有效的邮箱地址'));
   };
 
+  // 渲染个人信息表单项
+  const renderPersonalInfoFields = () => (
+    <>
+      <Divider orientation="left">个人信息</Divider>
+      
+      <Form.Item
+        name="gender"
+        rules={[{ required: true, message: '请选择您的性别' }]}
+      >
+        <Radio.Group>
+          <Radio value={1}>男</Radio>
+          <Radio value={0}>女</Radio>
+          <Radio value={2}>其他</Radio>
+        </Radio.Group>
+      </Form.Item>
+      
+      <Form.Item
+        name="major"
+        rules={[{ required: true, message: '请输入您的专业' }]}
+      >
+        <Input 
+          prefix={<BookOutlined className={styles.inputIcon} />}
+          placeholder="您的专业" 
+        />
+      </Form.Item>
+      
+      <Form.Item
+        name="target"
+        rules={[{ required: true, message: '请输入您的考研目标' }]}
+      >
+        <Input 
+          prefix={<AimOutlined className={styles.inputIcon} />}
+          placeholder="考研目标（如：计算机科学与技术、北京大学等）" 
+        />
+      </Form.Item>
+    </>
+  );
+
   return (
     <div className={styles.registerContainer}>
       <div className={styles.header}>
@@ -84,7 +148,7 @@ const RegisterPage: React.FC = () => {
           <Form
             form={form}
             name="register_email"
-            initialValues={{ prefix: '86' }}
+            initialValues={{ prefix: '86', gender: 1 }}
             onFinish={handleSubmit}
             size="large"
             className={styles.form}
@@ -142,6 +206,8 @@ const RegisterPage: React.FC = () => {
               />
             </Form.Item>
             
+            {renderPersonalInfoFields()}
+            
             <Form.Item
               name="agreement"
               valuePropName="checked"
@@ -180,7 +246,7 @@ const RegisterPage: React.FC = () => {
           <Form
             form={form}
             name="register_phone"
-            initialValues={{ prefix: '86' }}
+            initialValues={{ prefix: '86', gender: 1 }}
             onFinish={handleSubmit}
             size="large"
             className={styles.form}
@@ -252,6 +318,8 @@ const RegisterPage: React.FC = () => {
                 placeholder="确认密码" 
               />
             </Form.Item>
+            
+            {renderPersonalInfoFields()}
             
             <Form.Item
               name="agreement"

@@ -1,13 +1,18 @@
 import { configureStore, ThunkAction, Action } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
-import examReducer from './slices/examSlice';
+import questionReducer from './slices/questionSlice';
+// import courseReducer from './slices/courseSlice';
+// import examReducer from './slices/examSlice';
+// import communityReducer from './slices/communitySlice';
 
 // 配置Redux store
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    exam: examReducer,
-    // 可以在这里添加更多的reducer
+    question: questionReducer,
+    // course: courseReducer,
+    // exam: examReducer,
+    // community: communityReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

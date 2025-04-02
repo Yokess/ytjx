@@ -30,14 +30,31 @@ const LoginPage: React.FC = () => {
   }, [error]);
 
   const onFinish = async (values: LoginFormValues) => {
-    const success = await login({
-      username: values.username,
-      password: values.password
-    });
-    
-    if (success) {
-      message.success('登录成功！');
-      navigate('/');
+    console.log('表单提交，尝试登录:', values);
+    try {
+      const success = await login({
+        username: values.username,
+        password: values.password
+      });
+      
+      console.log('登录结果:', success);
+      
+      if (success) {
+        message.success('登录成功！');
+        // 延迟导航，确保状态更新完成
+        setTimeout(() => {
+          const token = localStorage.getItem('token');
+          const userId = localStorage.getItem('userId');
+          const username = localStorage.getItem('username');
+          console.log('导航前检查存储状态:', { token, userId, username });
+          navigate('/');
+        }, 1000);
+      } else {
+        message.error('登录失败，请检查用户名和密码');
+      }
+    } catch (err) {
+      console.error('登录过程中出错:', err);
+      message.error('登录过程中出错，请稍后重试');
     }
   };
 

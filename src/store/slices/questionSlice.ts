@@ -130,9 +130,9 @@ export const submitQuestionAnswer = createAsyncThunk(
 // 异步Action: 获取错题集
 export const fetchWrongQuestions = createAsyncThunk(
   'question/fetchWrongQuestions',
-  async ({ userId, page, size }: { userId: number; page?: number; size?: number }, { rejectWithValue }) => {
+  async ({ page, size }: { page?: number; size?: number }, { rejectWithValue }) => {
     try {
-      const response = await questionApi.getWrongQuestions(userId, page, size);
+      const response = await questionApi.getWrongQuestions(page, size);
       return response;
     } catch (error) {
       return rejectWithValue((error as Error).message);
@@ -143,9 +143,9 @@ export const fetchWrongQuestions = createAsyncThunk(
 // 异步Action: 获取排行榜
 export const fetchLeaderboard = createAsyncThunk(
   'question/fetchLeaderboard',
-  async ({ type, period, limit }: { type?: string; period?: string; limit?: number }, { rejectWithValue }) => {
+  async ({ limit }: { limit?: number } = {}, { rejectWithValue }) => {
     try {
-      const response = await questionApi.getLeaderboard(type, period, limit);
+      const response = await questionApi.getLeaderboard(limit);
       return response;
     } catch (error) {
       return rejectWithValue((error as Error).message);

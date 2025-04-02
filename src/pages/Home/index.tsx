@@ -17,7 +17,6 @@ import styles from './Home.module.scss';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
 
-// 尝试导入AOS库，如果项目中没有安装，需要先安装：npm install aos
 let AOS: any;
 try {
   AOS = require('aos');

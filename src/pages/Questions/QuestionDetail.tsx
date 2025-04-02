@@ -1,382 +1,241 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { 
-  Card, 
-  Button, 
-  Radio, 
-  Checkbox, 
-  Input, 
-  Space, 
-  Tag, 
-  Divider, 
-  Alert, 
-  Spin, 
-  Result,
-  Typography,
-  message
-} from 'antd';
-import { 
-  ArrowLeftOutlined, 
-  CheckCircleOutlined, 
-  CloseCircleOutlined,
-  QuestionCircleOutlined
-} from '@ant-design/icons';
+import { Card, Typography, Radio, Checkbox, Button, Space, message, Result } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 import MainLayout from '../../components/layout/MainLayout';
-import { RootState } from '../../store';
-import { 
-  fetchQuestionDetail, 
-  submitQuestionAnswer, 
-  clearCurrentQuestion, 
-  clearAnswerResult 
-} from '../../store/slices/questionSlice';
-import { 
-  QuestionType, 
-  QuestionDifficulty, 
-  SubmitAnswerRequest 
-} from '../../types/question';
 import styles from './Questions.module.scss';
+import questionApi from '../../api/questionApi';
 
-const { TextArea } = Input;
 const { Title, Paragraph, Text } = Typography;
 
-const QuestionDetailPage: React.FC = () => {
+const QuestionDetail: React.FC = () => {
   const { questionId } = useParams<{ questionId: string }>();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  
-  // 从Redux获取状态
-  const { 
-    currentQuestion, 
-    answerResult, 
-    loading, 
-    error 
-  } = useSelector((state: RootState) => state.question);
-  
-  // 本地状态
-  const [userAnswer, setUserAnswer] = useState<string>('');
-  const [submitted, setSubmitted] = useState<boolean>(false);
-  
-  // 初始加载
+  const [question, setQuestion] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    if (questionId) {
-      dispatch(fetchQuestionDetail(parseInt(questionId)) as any);
-    }
-    
-    // 组件卸载时清除当前题目和答题结果
-    return () => {
-      dispatch(clearCurrentQuestion());
-      dispatch(clearAnswerResult());
+    const fetchQuestionDetail = async () => {
+      try {
+        setLoading(true);
+        console.log('尝试获取题目详情, ID:', questionId);
+        
+        if (!questionId) {
+          setError('题目ID不存在');
+          setLoading(false);
+          return;
+        }
+
+        const response = await questionApi.getQuestionDetail(parseInt(questionId || '0'));
+        console.log('题目详情数据:', response);
+        
+        const questionData = {
+          questionId: response.questionId,
+          content: response.questionText,
+          type: response.questionType,
+          difficulty: response.difficultyLevel,
+          knowledgePoint: response.knowledgePoint,
+          knowledgePoints: response.knowledgePoints 
+            ? response.knowledgePoints.map((kp: any) => ({
+                id: kp.knowledgePointId,
+                name: kp.name
+              })) 
+            : (response.knowledgePoint 
+                ? response.knowledgePoint.split(',').map((name: string) => ({
+                    id: 0, // 临时ID
+                    name: name.trim()
+                  })) 
+                : []),
+          options: response.options?.map((opt: any) => ({
+            id: opt.optionId, 
+            label: opt.optionKey, 
+            content: opt.optionValue
+          })) || []
+        };
+        
+        setQuestion(questionData);
+      } catch (error) {
+        console.error('获取题目详情失败:', error);
+        setError('获取题目详情失败，请稍后重试');
+        message.error('获取题目详情失败');
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [dispatch, questionId]);
-  
-  // 处理答案变化
-  const handleAnswerChange = (value: string | string[]) => {
-    if (Array.isArray(value)) {
-      // 多选题，将选项排序并连接
-      setUserAnswer(value.sort().join(''));
-    } else {
-      setUserAnswer(value);
-    }
+
+    fetchQuestionDetail();
+  }, [questionId]);
+
+  const handleSingleAnswerChange = (e: any) => {
+    setSelectedAnswer(e.target.value);
   };
-  
-  // 处理提交答案
-  const handleSubmit = () => {
-    if (!userAnswer) {
-      message.warning('请先作答');
+
+  const handleMultipleAnswerChange = (checkedValues: string[]) => {
+    setSelectedAnswers(checkedValues);
+  };
+
+  const handleSubmitAnswer = async () => {
+    // 检查是否选择了答案
+    if (isMultipleChoice() && selectedAnswers.length === 0) {
+      message.warning('请至少选择一个选项');
+      return;
+    } else if (!isMultipleChoice() && !selectedAnswer) {
+      message.warning('请选择一个选项');
       return;
     }
-    
-    if (questionId && currentQuestion) {
-      const submitData: SubmitAnswerRequest = {
-        answer: userAnswer,
-        spendTime: 0 // 暂不计算答题时间
+
+    try {
+      setSubmitting(true);
+      
+      // 根据题目类型获取答案
+      let answer;
+      if (isMultipleChoice()) {
+        // 查找选中选项的标签(A,B,C,D)
+        const selectedLabels = selectedAnswers.map(id => {
+          const option = question.options.find((opt: any) => opt.id === id);
+          return option ? option.label : '';
+        }).filter(Boolean);
+        
+        // 按字母顺序排序并用逗号连接
+        answer = selectedLabels.sort().join(',');
+        console.log('多选题答案:', {
+          原始ID: selectedAnswers,
+          转换后标签: selectedLabels,
+          提交答案: answer
+        });
+      } else {
+        // 单选题，查找选中选项的标签
+        const selectedOption = question.options.find((opt: any) => opt.id === selectedAnswer);
+        answer = selectedOption ? selectedOption.label : selectedAnswer;
+        console.log('单选题答案:', {
+          原始ID: selectedAnswer,
+          转换后标签: answer
+        });
+      }
+      
+      console.log('提交答案:', {
+        questionId: parseInt(questionId || '0'),
+        answer
+      });
+      
+      const response = await questionApi.submitAnswer(parseInt(questionId || '0'), {
+        answer
+      });
+      
+      console.log('提交答案响应:', response);
+      
+      const resultData = {
+        isCorrect: response.isCorrect,
+        correctAnswer: response.correctAnswer,
+        explanation: response.explanation || response.analysis
       };
       
-      dispatch(submitQuestionAnswer({ questionId: parseInt(questionId), data: submitData }) as any);
-      setSubmitted(true);
+      setResult(resultData);
+      
+      if (resultData.isCorrect) {
+        message.success('回答正确！');
+      } else {
+        message.error('回答错误');
+      }
+    } catch (error) {
+      message.error('提交答案失败');
+      console.error('提交答案失败:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
-  
-  // 处理返回列表
-  const handleBackToList = () => {
+
+  const handleGoBack = () => {
     navigate('/questions');
   };
-  
-  // 处理下一题
-  const handleNextQuestion = () => {
-    // 这里简单实现为返回列表，实际应该获取下一题ID
-    navigate('/questions');
+
+  // 检查是否为多选题
+  const isMultipleChoice = () => {
+    return question && question.type === 1; // 1 表示多选题
   };
-  
-  // 获取题目类型标签
-  const getTypeLabel = (type: QuestionType) => {
-    switch (type) {
-      case QuestionType.SINGLE_CHOICE:
-        return '单选题';
-      case QuestionType.MULTIPLE_CHOICE:
-        return '多选题';
-      case QuestionType.JUDGE:
-        return '判断题';
-      case QuestionType.FILL_BLANK:
-        return '填空题';
-      case QuestionType.ESSAY:
-        return '问答题';
-      default:
-        return '未知类型';
-    }
-  };
-  
-  // 获取题目类型颜色
-  const getTypeColor = (type: QuestionType) => {
-    switch (type) {
-      case QuestionType.SINGLE_CHOICE:
-        return 'blue';
-      case QuestionType.MULTIPLE_CHOICE:
-        return 'purple';
-      case QuestionType.JUDGE:
-        return 'green';
-      case QuestionType.FILL_BLANK:
-        return 'orange';
-      case QuestionType.ESSAY:
-        return 'red';
-      default:
-        return 'default';
-    }
-  };
-  
-  // 获取难度标签
-  const getDifficultyLabel = (difficulty: QuestionDifficulty) => {
-    switch (difficulty) {
-      case QuestionDifficulty.EASY:
-        return '简单';
-      case QuestionDifficulty.MEDIUM:
-        return '中等';
-      case QuestionDifficulty.HARD:
-        return '困难';
-      case QuestionDifficulty.VERY_HARD:
-        return '很难';
-      case QuestionDifficulty.EXPERT:
-        return '专家';
-      default:
-        return '未知难度';
-    }
-  };
-  
-  // 获取难度颜色
-  const getDifficultyColor = (difficulty: QuestionDifficulty) => {
-    switch (difficulty) {
-      case QuestionDifficulty.EASY:
-        return 'green';
-      case QuestionDifficulty.MEDIUM:
-        return 'blue';
-      case QuestionDifficulty.HARD:
-        return 'orange';
-      case QuestionDifficulty.VERY_HARD:
-        return 'red';
-      case QuestionDifficulty.EXPERT:
-        return 'purple';
-      default:
-        return 'default';
-    }
-  };
-  
-  // 渲染答题区域
-  const renderAnswerArea = () => {
-    if (!currentQuestion) return null;
+
+  const renderOptions = () => {
+    if (!question || !Array.isArray(question.options)) return null;
     
-    switch (currentQuestion.type) {
-      case QuestionType.SINGLE_CHOICE:
-        return (
-          <Radio.Group 
-            onChange={(e) => handleAnswerChange(e.target.value)} 
-            value={userAnswer}
-            disabled={submitted}
-            className={styles.radioGroup}
-          >
-            <Space direction="vertical" className={styles.optionsSpace}>
-              {currentQuestion.options?.map((option) => (
-                <Radio key={option.id} value={option.id} className={styles.radioOption}>
-                  <span className={styles.optionId}>{option.id}.</span>
-                  <span className={styles.optionContent}>{option.content}</span>
-                </Radio>
-              ))}
-            </Space>
-          </Radio.Group>
-        );
-        
-      case QuestionType.MULTIPLE_CHOICE:
-        return (
-          <Checkbox.Group 
-            onChange={(values) => handleAnswerChange(values as string[])} 
-            value={userAnswer.split('')}
-            disabled={submitted}
-            className={styles.checkboxGroup}
-          >
-            <Space direction="vertical" className={styles.optionsSpace}>
-              {currentQuestion.options?.map((option) => (
-                <Checkbox key={option.id} value={option.id} className={styles.checkboxOption}>
-                  <span className={styles.optionId}>{option.id}.</span>
-                  <span className={styles.optionContent}>{option.content}</span>
+    // 多选题使用 Checkbox，单选题使用 Radio
+    if (isMultipleChoice()) {
+      return (
+        <Checkbox.Group 
+          onChange={handleMultipleAnswerChange} 
+          value={selectedAnswers} 
+          disabled={!!result}
+          className={styles.optionsGrid}
+        >
+          <Space direction="vertical" style={{ width: '100%' }}>
+            {question.options.map((option: any) => (
+              <div key={option.id} className={styles.optionItem}>
+                <Checkbox value={option.id}>
+                  {option.label}. {option.content}
                 </Checkbox>
-              ))}
-            </Space>
-          </Checkbox.Group>
-        );
-        
-      case QuestionType.JUDGE:
-        return (
-          <Radio.Group 
-            onChange={(e) => handleAnswerChange(e.target.value)} 
-            value={userAnswer}
-            disabled={submitted}
-            className={styles.radioGroup}
-          >
-            <Space direction="vertical" className={styles.optionsSpace}>
-              <Radio value="1" className={styles.radioOption}>正确</Radio>
-              <Radio value="0" className={styles.radioOption}>错误</Radio>
-            </Space>
-          </Radio.Group>
-        );
-        
-      case QuestionType.FILL_BLANK:
-        return (
-          <Input 
-            placeholder="请输入答案" 
-            value={userAnswer} 
-            onChange={(e) => handleAnswerChange(e.target.value)}
-            disabled={submitted}
-            className={styles.fillBlankInput}
-          />
-        );
-        
-      case QuestionType.ESSAY:
-        return (
-          <TextArea 
-            placeholder="请输入答案" 
-            value={userAnswer} 
-            onChange={(e) => handleAnswerChange(e.target.value)}
-            disabled={submitted}
-            rows={6}
-            className={styles.essayInput}
-          />
-        );
-        
-      default:
-        return null;
+              </div>
+            ))}
+          </Space>
+        </Checkbox.Group>
+      );
+    } else {
+      return (
+        <Radio.Group 
+          onChange={handleSingleAnswerChange} 
+          value={selectedAnswer} 
+          disabled={!!result}
+        >
+          <Space direction="vertical" className={styles.optionsGrid}>
+            {question.options.map((option: any) => (
+              <div key={option.id} className={styles.optionItem}>
+                <Radio value={option.id}>
+                  {option.label}. {option.content}
+                </Radio>
+              </div>
+            ))}
+          </Space>
+        </Radio.Group>
+      );
     }
   };
-  
-  // 渲染答题结果
+
   const renderResult = () => {
-    if (!answerResult) return null;
-    
-    const isCorrect = answerResult.isCorrect;
+    if (!result) return null;
     
     return (
-      <div className={styles.answerResult}>
-        <Alert
-          message={isCorrect ? "回答正确" : "回答错误"}
-          description={
-            <div>
-              <div className={styles.correctAnswer}>
-                <Text strong>正确答案：</Text>
-                <Text>{answerResult.correctAnswer}</Text>
-              </div>
-              <Divider />
-              <div className={styles.analysis}>
-                <Text strong>解析：</Text>
-                <Paragraph>{answerResult.analysis}</Paragraph>
-              </div>
-            </div>
-          }
-          type={isCorrect ? "success" : "error"}
-          showIcon
-          icon={isCorrect ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-          className={styles.resultAlert}
-        />
+      <div className={styles.analysis}>
+        <div className={styles.analysisTitle}>
+          {result.isCorrect ? '答对了！' : '答错了！'}
+        </div>
+        <div className={styles.analysisContent}>
+          <p><strong>正确答案：</strong>{result.correctAnswer}</p>
+          <p><strong>解析：</strong>{result.explanation}</p>
+        </div>
       </div>
     );
   };
-  
-  // 渲染侧边栏
-  const renderSidebar = () => {
-    return (
-      <div className={styles.sidebar}>
-        <Card title="答题卡" className={styles.answerCard}>
-          <div className={styles.questionInfo}>
-            <div className={styles.questionNumber}>
-              题目 #{questionId}
-            </div>
-            {currentQuestion && (
-              <div className={styles.questionTags}>
-                <Tag color={getTypeColor(currentQuestion.type)}>
-                  {getTypeLabel(currentQuestion.type)}
-                </Tag>
-                <Tag color={getDifficultyColor(currentQuestion.difficulty)}>
-                  {getDifficultyLabel(currentQuestion.difficulty)}
-                </Tag>
-              </div>
-            )}
-          </div>
-          
-          <Divider />
-          
-          <div className={styles.answerActions}>
-            <Button 
-              type="primary" 
-              onClick={handleSubmit}
-              disabled={submitted || !userAnswer}
-              block
-              className={styles.submitButton}
-            >
-              提交答案
-            </Button>
-            
-            <Button 
-              onClick={handleBackToList}
-              icon={<ArrowLeftOutlined />}
-              className={styles.backButton}
-            >
-              返回列表
-            </Button>
-            
-            {submitted && (
-              <Button 
-                type="primary"
-                onClick={handleNextQuestion}
-                className={styles.nextButton}
-              >
-                下一题
-              </Button>
-            )}
-          </div>
-        </Card>
-      </div>
-    );
-  };
-  
-  // 加载中
-  if (loading.questionDetail) {
+
+  if (loading) {
     return (
       <MainLayout>
-        <div className={styles.loadingContainer}>
-          <Spin size="large" />
-        </div>
+        <Card loading={true} />
       </MainLayout>
     );
   }
-  
-  // 加载错误
-  if (error.questionDetail) {
+
+  if (error) {
     return (
       <MainLayout>
         <Result
           status="error"
           title="加载失败"
-          subTitle={error.questionDetail}
+          subTitle={error}
           extra={
-            <Button type="primary" onClick={handleBackToList}>
+            <Button type="primary" onClick={handleGoBack}>
               返回题目列表
             </Button>
           }
@@ -384,16 +243,16 @@ const QuestionDetailPage: React.FC = () => {
       </MainLayout>
     );
   }
-  
-  // 题目不存在
-  if (!currentQuestion) {
+
+  if (!question) {
     return (
       <MainLayout>
         <Result
-          icon={<QuestionCircleOutlined />}
-          title="题目不存在"
+          status="404"
+          title="未找到题目"
+          subTitle="抱歉，请求的题目不存在"
           extra={
-            <Button type="primary" onClick={handleBackToList}>
+            <Button type="primary" onClick={handleGoBack}>
               返回题目列表
             </Button>
           }
@@ -401,26 +260,80 @@ const QuestionDetailPage: React.FC = () => {
       </MainLayout>
     );
   }
-  
+
   return (
-    <MainLayout sidebarContent={renderSidebar()}>
-      <div className={styles.questionDetailPage}>
-        <Card className={styles.questionCard}>
-          <div className={styles.questionHeader}>
-            <Title level={4} className={styles.questionTitle}>
-              {currentQuestion.content}
+    <MainLayout>
+      <div style={{ padding: '20px' }}>
+        <Button 
+          icon={<ArrowLeftOutlined />} 
+          onClick={handleGoBack}
+          style={{ marginBottom: '16px' }}
+        >
+          返回题目列表
+        </Button>
+        
+        <Card>
+          <div>
+            <Title level={4}>
+              {question.content}
             </Title>
+            
+            <Paragraph>
+              <Text type="secondary">
+                题型：{getTypeName(question.type)} | 
+                难度：{getDifficultyName(question.difficulty)} | 
+                知识点：{question.knowledgePoint}
+              </Text>
+            </Paragraph>
+            
+            {renderOptions()}
+            
+            <div style={{ marginTop: '20px' }}>
+              {!result ? (
+                <Button 
+                  type="primary" 
+                  onClick={handleSubmitAnswer} 
+                  loading={submitting}
+                  disabled={(isMultipleChoice() ? selectedAnswers.length === 0 : !selectedAnswer)}
+                >
+                  提交答案
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleGoBack}
+                >
+                  继续做题
+                </Button>
+              )}
+            </div>
+            
+            {renderResult()}
           </div>
-          
-          <div className={styles.questionBody}>
-            {renderAnswerArea()}
-          </div>
-          
-          {submitted && renderResult()}
         </Card>
       </div>
     </MainLayout>
   );
 };
 
-export default QuestionDetailPage; 
+// 辅助函数
+const getTypeName = (type: number) => {
+  const typeMap: Record<number, string> = {
+    0: '单选题',
+    1: '多选题',
+    2: '填空题',
+    3: '判断题',
+    4: '问答题'
+  };
+  return typeMap[type] || '未知';
+};
+
+const getDifficultyName = (difficulty: number) => {
+  const difficultyMap: Record<number, string> = {
+    0: '简单',
+    1: '中等',
+    2: '困难'
+  };
+  return difficultyMap[difficulty] || '未知';
+};
+
+export default QuestionDetail; 

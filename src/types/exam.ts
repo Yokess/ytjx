@@ -7,11 +7,11 @@ export enum ExamStatus {
 
 // 题目类型枚举（与question.ts中保持一致）
 export enum QuestionType {
-  SINGLE_CHOICE = 1,  // 单选题
-  MULTIPLE_CHOICE = 2, // 多选题
+  SINGLE_CHOICE = 0,  // 单选题
+  MULTIPLE_CHOICE = 1, // 多选题
   JUDGE = 3,           // 判断题
-  FILL_BLANK = 4,      // 填空题
-  ESSAY = 5            // 简答题
+  FILL_BLANK = 2,      // 填空题
+  ESSAY = 4            // 简答题
 }
 
 // 题目选项接口

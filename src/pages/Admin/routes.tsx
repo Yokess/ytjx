@@ -9,6 +9,7 @@ const UserRoles = lazy(() => import('./Users/UserRoles'));
 const CoursesList = lazy(() => import('./Courses/CoursesList'));
 const QuestionsList = lazy(() => import('./Questions/QuestionsList'));
 const ExamsList = lazy(() => import('./Exams/ExamsList'));
+const ExamCreate = lazy(() => import('./Exams/ExamCreate'));
 const CommentsManager = lazy(() => import('./Community/CommentsManager'));
 
 // 修正导入路径
@@ -81,11 +82,30 @@ const routes: RouteConfig[] = [
   },
   {
     path: '/admin/exams',
-    component: ExamsList,
-    element: <ExamsList />,
     icon: <FileTextOutlined />,
     name: '考试管理',
-    exact: true,
+    children: [
+      {
+        path: '',
+        element: <Navigate to="/admin/exams/list" replace />,
+        exact: true,
+        name: '考试列表重定向',
+      },
+      {
+        path: 'list',
+        component: ExamsList,
+        element: <ExamsList />,
+        name: '考试列表',
+        exact: true,
+      },
+      {
+        path: 'new',
+        component: ExamCreate,
+        element: <ExamCreate />,
+        name: '创建考试',
+        exact: true,
+      },
+    ],
   },
   {
     path: '/admin/community',

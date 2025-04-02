@@ -17,7 +17,8 @@ import {
   Divider,
   Progress,
   Space,
-  Radio
+  Radio,
+  message
 } from 'antd';
 import { 
   SearchOutlined, 
@@ -45,6 +46,9 @@ import {
   QuestionQueryParams 
 } from '../../types/question';
 import styles from './Questions.module.scss';
+// 导入默认头像
+import defaultAvatar from '../../assets/images/default-avatar.svg';
+import questionApi from '../../api/questionApi';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -63,8 +67,6 @@ const difficultyOptions = [
   { value: QuestionDifficulty.EASY, label: '简单' },
   { value: QuestionDifficulty.MEDIUM, label: '中等' },
   { value: QuestionDifficulty.HARD, label: '困难' },
-  { value: QuestionDifficulty.VERY_HARD, label: '很难' },
-  { value: QuestionDifficulty.EXPERT, label: '专家' }
 ];
 
 // 知识点选项（模拟数据）
@@ -104,6 +106,10 @@ const QuestionsPage: React.FC = () => {
   const [difficultyFilter, setDifficultyFilter] = useState<QuestionDifficulty | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<QuestionType | 'all'>('all');
   const [knowledgePointFilter, setKnowledgePointFilter] = useState<number | 'all'>('all');
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // 初始加载
   useEffect(() => {
@@ -150,9 +156,36 @@ const QuestionsPage: React.FC = () => {
     });
   };
   
-  // 处理题目点击
-  const handleQuestionClick = (questionId: number) => {
-    navigate(`/questions/${questionId}`);
+  const handleAnswerSelect = (answerId: string) => {
+    setSelectedAnswer(answerId);
+  };
+
+  const handleSubmitAnswer = async () => {
+    if (!selectedAnswer || !currentQuestion) return;
+    
+    setIsSubmitting(true);
+    try {
+      const response = await questionApi.submitAnswer(currentQuestion.questionId, {
+        answer: selectedAnswer
+      });
+      
+      if (response.isCorrect) {
+        message.success('回答正确！');
+        setShowAnswer(true);
+      } else {
+        message.error('回答错误，请重试');
+      }
+    } catch (error) {
+      message.error('提交答案失败，请重试');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleQuestionClick = (question: any) => {
+    // 跳转到题目详情页面
+    console.log('点击题目:', question);
+    navigate(`/questions/${question.questionId}`);
   };
   
   // 渲染侧边栏内容
@@ -262,7 +295,7 @@ const QuestionsPage: React.FC = () => {
             </div>
           ) : leaderboard ? (
             <div className={styles.leaderboard}>
-              {leaderboard.leaderboard.map((item, index) => (
+              {leaderboard.leaderboard && leaderboard.leaderboard.map((item, index) => (
                 <div key={item.userId} className={styles.leaderboardItem}>
                   <div className={styles.rank}>
                     {index < 3 ? (
@@ -272,7 +305,15 @@ const QuestionsPage: React.FC = () => {
                     )}
                   </div>
                   <div className={styles.userInfo}>
-                    <img src={item.avatar} alt={item.username} className={styles.avatar} />
+                    <img 
+                      src={item.avatar || defaultAvatar} 
+                      alt={item.username} 
+                      className={styles.avatar} 
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = defaultAvatar;
+                      }}
+                    />
                     <span className={styles.username}>{item.username}</span>
                   </div>
                   <div className={styles.stats}>
@@ -292,66 +333,60 @@ const QuestionsPage: React.FC = () => {
   
   // 渲染题目卡片
   const renderQuestionCard = (question: any) => {
+    const isSelected = currentQuestion?.questionId === question.questionId;
+    
     return (
       <Card 
-        key={question.questionId}
-        className={styles.questionCard}
-        hoverable
+        key={question.questionId} 
+        className={`${styles.questionCard} ${isSelected ? styles.selected : ''}`}
+        onClick={() => handleQuestionClick(question)}
       >
         <div className={styles.questionHeader}>
-          <div className={styles.questionTags}>
-            <Tag color={getTypeColor(question.type)}>{getTypeLabel(question.type)}</Tag>
-            <div className={styles.difficultyTag}>
-              <span className={styles.starIcon}>★</span>
-              <span className={styles.difficultyText}>{getDifficultyLabel(question.difficulty)}</span>
-            </div>
-          </div>
-          <div className={styles.questionStats}>
-            <span className={styles.statItem}>通过率: {(question.passRate * 100).toFixed(0)}%</span>
-          </div>
-        </div>
-        
-        <div className={styles.tagsList}>
-          {question.knowledgePoints && question.knowledgePoints.map((kp: any) => (
-            <Tag key={kp.id} className={styles.knowledgeTag}>{kp.name}</Tag>
-          ))}
+          <Tag color={getTypeColor(question.type)}>{getTypeLabel(question.type)}</Tag>
+          <Tag color={getDifficultyColor(question.difficulty)}>
+            {getDifficultyLabel(question.difficulty)}
+          </Tag>
         </div>
         
         <div className={styles.questionContent}>
-          <div className={styles.questionText}>
-            <span className={styles.questionNumber}>{question.questionId}.</span>
-            {question.content}
-          </div>
+          <div className={styles.questionText}>{question.content}</div>
           
-          {question.options && (
-            <div className={styles.optionsGrid}>
-              {question.options.map((option: any) => (
-                <div key={option.id} className={styles.optionItem}>
-                  <Radio value={option.id} disabled>
-                    {option.id}. {option.content}
-                  </Radio>
+          {isSelected && (
+            <div className={styles.answerSection}>
+              <div className={styles.optionsGrid}>
+                {question.options.map((option: any) => (
+                  <div key={option.id} className={styles.optionItem}>
+                    <Radio 
+                      value={option.id} 
+                      checked={selectedAnswer === option.id}
+                      onChange={() => handleAnswerSelect(option.id)}
+                      disabled={showAnswer}
+                    >
+                      {option.content.replace(/^\d+\.\s*/, '')}
+                    </Radio>
+                  </div>
+                ))}
+              </div>
+              
+              {!showAnswer && (
+                <Button 
+                  type="primary" 
+                  onClick={handleSubmitAnswer}
+                  loading={isSubmitting}
+                  disabled={!selectedAnswer}
+                >
+                  提交答案
+                </Button>
+              )}
+              
+              {showAnswer && (
+                <div className={styles.analysis}>
+                  <div className={styles.analysisTitle}>解析：</div>
+                  <div className={styles.analysisContent}>{question.analysis}</div>
                 </div>
-              ))}
+              )}
             </div>
           )}
-        </div>
-        
-        <div className={styles.questionFooter}>
-          <div className={styles.actionButtons}>
-            <Button type="text" icon={<StarOutlined />} className={styles.actionButton}>
-              收藏
-            </Button>
-            <Button type="text" icon={<MessageOutlined />} className={styles.actionButton}>
-              讨论(0)
-            </Button>
-          </div>
-          <Button 
-            type="primary" 
-            className={styles.analysisButton}
-            onClick={() => handleQuestionClick(question.questionId)}
-          >
-            开始答题
-          </Button>
         </div>
       </Card>
     );
@@ -597,7 +632,7 @@ const QuestionsPage: React.FC = () => {
               <div className={styles.loadingContainer}>
                 <Spin size="large" />
               </div>
-            ) : questions.length > 0 ? (
+            ) : questions && questions.length > 0 ? (
               <>
                 <div className={styles.questionsList}>
                   {questions.map(question => renderQuestionCard(question))}

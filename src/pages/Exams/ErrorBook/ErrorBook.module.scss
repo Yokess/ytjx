@@ -511,4 +511,93 @@
       }
     }
   }
+}
+
+// 添加加载和错误状态的样式
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 0;
+  height: 300px;
+}
+
+.errorCardsList {
+  margin-bottom: 20px;
+}
+
+// 添加移除按钮的样式
+.removeButton {
+  background-color: #ff4d4f;
+  border-color: #ff4d4f;
+  
+  &:hover {
+    background-color: #ff7875;
+    border-color: #ff7875;
+  }
+}
+
+.optionsContainer {
+  margin: 10px 0;
+  padding-left: 24px;
+}
+
+.optionItem {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.optionKey {
+  font-weight: 500;
+  margin-right: 5px;
+}
+
+.optionValue {
+  color: #333;
+}
+
+.answerAndAnalysis {
+  background-color: #f5f5f5;
+  padding: 10px 15px;
+  margin: 10px 0;
+  border-radius: 4px;
+  border-left: 3px solid #1890ff;
+}
+
+.correctAnswer, .analysis {
+  margin-bottom: 8px;
+}
+
+.label {
+  font-weight: 600;
+  color: #444;
+  margin-right: 5px;
+}
+
+.value {
+  color: #666;
+}
+
+.knowledgePointsContainer {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.knowledgePointsLabel {
+  margin-right: 8px;
+  font-weight: 500;
+  color: #555;
+}
+
+.knowledgePointTag {
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+
+.passRate, .usageCount, .creator {
+  margin-left: 15px;
+  font-size: 12px;
+  color: #666;
 } 

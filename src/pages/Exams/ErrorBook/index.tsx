@@ -10,7 +10,10 @@ import {
   Menu, 
   Pagination,
   Space,
-  Divider
+  Divider,
+  Spin,
+  Empty,
+  message
 } from 'antd';
 import { 
   BookOutlined, 
@@ -23,14 +26,22 @@ import {
   ArrowLeftOutlined
 } from '@ant-design/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import MainLayout from '../../../components/layout/MainLayout';
 import styles from './ErrorBook.module.scss';
+import { RootState } from '../../../store';
+import { 
+  fetchWrongQuestions,
+  setWrongQuestionsCurrentPage
+} from '../../../store/slices/questionSlice';
+import { removeFromWrongBook } from '../../../api/questionApi';
+import { QuestionType, QuestionDifficulty } from '../../../types/question';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 // 侧边栏内容
-const SidebarContent = ({ onBackClick }: { onBackClick: () => void }) => {
+const SidebarContent = ({ onBackClick, totalWrongQuestions }: { onBackClick: () => void, totalWrongQuestions: number }) => {
   return (
     <div className={styles.sidebar}>
       {/* 错题统计概览 */}
@@ -39,11 +50,7 @@ const SidebarContent = ({ onBackClick }: { onBackClick: () => void }) => {
         <div className={styles.statsGrid}>
           <div className={styles.statItem}>
             <span className={styles.statLabel}>总错题数</span>
-            <span className={styles.statValue}>86</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>已掌握</span>
-            <span className={styles.statValue}>32</span>
+            <span className={styles.statValue}>{totalWrongQuestions}</span>
           </div>
         </div>
       </div>
@@ -71,69 +78,6 @@ const SidebarContent = ({ onBackClick }: { onBackClick: () => void }) => {
         </div>
       </div>
 
-      {/* 科目分类 */}
-      <div className={styles.subjectCategories}>
-        <h3>科目分类</h3>
-        <div className={styles.subjectList}>
-          <div className={styles.subjectItem}>
-            <div className={styles.subjectInfo}>
-              <div className={styles.subjectDot} style={{ backgroundColor: '#5B5CFF' }}></div>
-              <span className={styles.subjectName}>数学</span>
-              <span className={styles.subjectCount}>42</span>
-            </div>
-          </div>
-          <div className={styles.subjectItem}>
-            <div className={styles.subjectInfo}>
-              <div className={styles.subjectDot} style={{ backgroundColor: '#52c41a' }}></div>
-              <span className={styles.subjectName}>英语</span>
-              <span className={styles.subjectCount}>18</span>
-            </div>
-          </div>
-          <div className={styles.subjectItem}>
-            <div className={styles.subjectInfo}>
-              <div className={styles.subjectDot} style={{ backgroundColor: '#722ed1' }}></div>
-              <span className={styles.subjectName}>政治</span>
-              <span className={styles.subjectCount}>15</span>
-            </div>
-          </div>
-          <div className={styles.subjectItem}>
-            <div className={styles.subjectInfo}>
-              <div className={styles.subjectDot} style={{ backgroundColor: '#fa8c16' }}></div>
-              <span className={styles.subjectName}>专业课</span>
-              <span className={styles.subjectCount}>11</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 难度分类 */}
-      <div className={styles.difficultyCategories}>
-        <h3>难度分类</h3>
-        <div className={styles.difficultyList}>
-          <div className={styles.difficultyItem}>
-            <div className={styles.difficultyInfo}>
-              <div className={styles.difficultyDot} style={{ backgroundColor: '#52c41a' }}></div>
-              <span className={styles.difficultyName}>简单</span>
-              <span className={styles.difficultyCount}>12</span>
-            </div>
-          </div>
-          <div className={styles.difficultyItem}>
-            <div className={styles.difficultyInfo}>
-              <div className={styles.difficultyDot} style={{ backgroundColor: '#faad14' }}></div>
-              <span className={styles.difficultyName}>中等</span>
-              <span className={styles.difficultyCount}>38</span>
-            </div>
-          </div>
-          <div className={styles.difficultyItem}>
-            <div className={styles.difficultyInfo}>
-              <div className={styles.difficultyDot} style={{ backgroundColor: '#f5222d' }}></div>
-              <span className={styles.difficultyName}>困难</span>
-              <span className={styles.difficultyCount}>36</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <Button 
         type="primary" 
         onClick={onBackClick}
@@ -147,68 +91,27 @@ const SidebarContent = ({ onBackClick }: { onBackClick: () => void }) => {
   );
 };
 
-// 错题数据
-const errorQuestions = [
-  {
-    id: '1',
-    question: '已知函数f(x)=ln(x+√(x²+1))，求f\'(x)。',
-    options: [
-      { label: 'A. 1/√(x²+1)', value: 'A' },
-      { label: 'B. x/√(x²+1)', value: 'B' },
-      { label: 'C. 1/(x²+1)', value: 'C' },
-      { label: 'D. x/(x²+1)', value: 'D' }
-    ],
-    correctAnswer: 'A',
-    userAnswer: 'C',
-    difficulty: 'hard',
-    category: '微积分',
-    errorCount: 3,
-    lastErrorDate: '2024-05-10',
-    errorAnalysis: '你选择了C选项，但正确答案是A。常见错误：在求导过程中忽略了复合函数求导法则，或者在处理根号项时计算错误。',
-    solutionSteps: [
-      '1. 令u = x + √(x²+1)，则f(x) = ln(u)',
-      '2. 使用链式法则：f\'(x) = (1/u) · u\'',
-      '3. 计算u\'：u\' = 1 + (1/2)(x²+1)^(-1/2) · 2x = 1 + x/√(x²+1)',
-      '4. 代入得：f\'(x) = (1/(x+√(x²+1))) · (1 + x/√(x²+1))',
-      '5. 化简：f\'(x) = (1 + x/√(x²+1))/(x+√(x²+1)) = 1/√(x²+1)'
-    ],
-    relatedKnowledge: ['复合函数求导法则', '对数函数求导', '根式的求导'],
-    discussionCount: 8
-  },
-  {
-    id: '2',
-    question: '设A是3阶方阵，|A|=2，则|2A|=？',
-    options: [
-      { label: 'A. 2', value: 'A' },
-      { label: 'B. 4', value: 'B' },
-      { label: 'C. 8', value: 'C' },
-      { label: 'D. 16', value: 'D' }
-    ],
-    correctAnswer: 'D',
-    userAnswer: 'C',
-    difficulty: 'medium',
-    category: '线性代数',
-    errorCount: 2,
-    lastErrorDate: '2024-05-08',
-    errorAnalysis: '你选择了C选项，但正确答案是D。常见错误：忘记了行列式的性质，当矩阵的每一行（或每一列）都乘以同一个数k时，行列式的值变为原来的k^n倍，其中n为矩阵的阶数。',
-    solutionSteps: [
-      '1. 根据行列式的性质，若A是n阶方阵，则|kA| = k^n|A|',
-      '2. 本题中，A是3阶方阵，|A| = 2',
-      '3. 所以|2A| = 2^3|A| = 8 × 2 = 16'
-    ],
-    relatedKnowledge: ['行列式的性质', '矩阵的运算'],
-    discussionCount: 5
-  }
-];
-
 const ErrorBookPage: React.FC = () => {
   const [chapter, setChapter] = useState('all');
   const [difficulty, setDifficulty] = useState('all');
   const [status, setStatus] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
+
+  // 从Redux获取错题集数据
+  const { 
+    wrongQuestions, 
+    wrongQuestionsTotal, 
+    wrongQuestionsCurrentPage,
+    loading
+  } = useSelector((state: RootState) => state.question);
+
+  // 加载错题集数据
+  useEffect(() => {
+    dispatch(fetchWrongQuestions({ page: wrongQuestionsCurrentPage, size: 10 }) as any);
+  }, [dispatch, wrongQuestionsCurrentPage]);
 
   // 处理返回按钮点击
   const handleBackClick = () => {
@@ -225,25 +128,47 @@ const ErrorBookPage: React.FC = () => {
   const handleFilter = () => {
     // 实际应用中这里会调用API进行筛选
     console.log('筛选条件：', { chapter, difficulty, status });
+    // 重置到第一页
+    dispatch(setWrongQuestionsCurrentPage(1) as any);
+    // 重新获取数据
+    dispatch(fetchWrongQuestions({ page: 1, size: 10 }) as any);
   };
 
   // 处理分页变化
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    dispatch(setWrongQuestionsCurrentPage(page) as any);
   };
 
   // 标记为已掌握
-  const handleMarkAsMastered = (id: string) => {
+  const handleMarkAsMastered = (id: number) => {
     console.log('标记为已掌握：', id);
+    // 这里需要先实现API
   };
 
   // 再做一遍
-  const handleRetry = (id: string) => {
-    console.log('再做一遍：', id);
+  const handleRetry = (id: number) => {
+    navigate(`/questions/${id}`);
+  };
+
+  // 从错题本移除
+  const handleRemoveFromWrongBook = async (questionId: number) => {
+    try {
+      const success = await removeFromWrongBook(questionId);
+      if (success) {
+        message.success('已从错题本移除');
+        // 重新获取错题集数据
+        dispatch(fetchWrongQuestions({ page: wrongQuestionsCurrentPage, size: 10 }) as any);
+      } else {
+        message.error('移除失败');
+      }
+    } catch (error) {
+      message.error('移除失败');
+      console.error('移除错题失败:', error);
+    }
   };
 
   // 更多操作菜单
-  const moreMenu = (id: string) => (
+  const moreMenu = (id: number) => (
     <Menu>
       <Menu.Item key="mastered" onClick={() => handleMarkAsMastered(id)}>
         标记为已掌握
@@ -251,18 +176,72 @@ const ErrorBookPage: React.FC = () => {
       <Menu.Item key="review">
         添加到复习计划
       </Menu.Item>
-      <Menu.Item key="remove" danger>
+      <Menu.Item key="remove" danger onClick={() => handleRemoveFromWrongBook(id)}>
         从错题本移除
       </Menu.Item>
     </Menu>
   );
 
+  // 获取题目类型标签
+  const getTypeLabel = (type: QuestionType) => {
+    switch(type) {
+      case QuestionType.SINGLE_CHOICE:
+        return '单选题';
+      case QuestionType.MULTIPLE_CHOICE:
+        return '多选题';
+      case QuestionType.JUDGE:
+        return '判断题';
+      case QuestionType.FILL_BLANK:
+        return '填空题';
+      case QuestionType.ESSAY:
+        return '问答题';
+      default:
+        return '未知类型';
+    }
+  };
+
+  // 获取难度标签
+  const getDifficultyLabel = (difficulty: QuestionDifficulty) => {
+    switch(difficulty) {
+      case QuestionDifficulty.EASY:
+        return '简单';
+      case QuestionDifficulty.MEDIUM:
+        return '中等';
+      case QuestionDifficulty.HARD:
+        return '困难';
+      case QuestionDifficulty.VERY_HARD:
+        return '很难';
+      case QuestionDifficulty.EXPERT:
+        return '专家';
+      default:
+        return '未知难度';
+    }
+  };
+
+  // 获取难度颜色
+  const getDifficultyColor = (difficulty: QuestionDifficulty) => {
+    switch(difficulty) {
+      case QuestionDifficulty.EASY:
+        return 'green';
+      case QuestionDifficulty.MEDIUM:
+        return 'orange';
+      case QuestionDifficulty.HARD:
+        return 'red';
+      case QuestionDifficulty.VERY_HARD:
+        return 'magenta';
+      case QuestionDifficulty.EXPERT:
+        return 'purple';
+      default:
+        return 'blue';
+    }
+  };
+
   return (
-    <MainLayout sidebarContent={<SidebarContent onBackClick={handleBackClick} />}>
+    <MainLayout sidebarContent={<SidebarContent onBackClick={handleBackClick} totalWrongQuestions={wrongQuestionsTotal} />}>
       <div className={styles.errorBookContainer}>
         {/* 错题本标题和筛选 */}
         <div className={styles.headerSection}>
-          <Title level={2} className={styles.pageTitle}>数学错题本</Title>
+          <Title level={2} className={styles.pageTitle}>我的错题本</Title>
           <div className={styles.filterSection}>
             <Select
               defaultValue="all"
@@ -303,108 +282,123 @@ const ErrorBookPage: React.FC = () => {
         </div>
 
         {/* 错题列表 */}
-        <div className={styles.errorList}>
-          {errorQuestions.map((question) => (
-            <Card key={question.id} className={styles.errorCard}>
-              <div className={styles.cardHeader}>
-                <div className={styles.tags}>
-                  <Tag color={question.difficulty === 'hard' ? 'red' : question.difficulty === 'medium' ? 'orange' : 'green'} className={styles.difficultyTag}>
-                    {question.difficulty === 'hard' ? '困难' : question.difficulty === 'medium' ? '中等' : '简单'}
-                  </Tag>
-                  <Tag color="blue" className={styles.categoryTag}>{question.category}</Tag>
-                  <span className={styles.errorCount}>错误次数：{question.errorCount}</span>
-                </div>
-                <div className={styles.metaInfo}>
-                  <span className={styles.lastErrorDate}>最近错误：{question.lastErrorDate}</span>
-                  <Dropdown overlay={moreMenu(question.id)} trigger={['click']} placement="bottomRight">
-                    <Button type="text" icon={<MoreOutlined />} className={styles.moreButton} />
-                  </Dropdown>
-                </div>
-              </div>
-
-              <div className={styles.questionContent}>
-                <div className={styles.questionText}>
-                  <span className={styles.questionNumber}>{question.id}.</span>
-                  {question.question}
-                </div>
-                <div className={styles.optionsGrid}>
-                  {question.options.map((option) => (
-                    <div key={option.value} className={styles.optionItem}>
-                      <Radio 
-                        checked={option.value === question.userAnswer} 
-                        className={
-                          option.value === question.correctAnswer 
-                            ? styles.correctOption 
-                            : option.value === question.userAnswer 
-                              ? styles.wrongOption 
-                              : ''
-                        }
-                      >
-                        {option.label}
-                      </Radio>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 错误分析 */}
-                <div className={styles.errorAnalysis}>
-                  <h4>错误分析</h4>
-                  <p>{question.errorAnalysis}</p>
-                </div>
-
-                {/* 解题步骤 */}
-                <div className={styles.solutionSteps}>
-                  <h4>解题步骤</h4>
-                  <div className={styles.steps}>
-                    {question.solutionSteps.map((step, index) => (
-                      <p key={index}>{step}</p>
-                    ))}
+        <div className={styles.errorCardsList}>
+          {loading.wrongQuestions ? (
+            <div className={styles.loadingContainer}>
+              <Spin size="large" />
+            </div>
+          ) : wrongQuestions.length > 0 ? (
+            wrongQuestions.map((question) => (
+              <Card key={question.questionId} className={styles.errorCard}>
+                <div className={styles.cardHeader}>
+                  <div className={styles.tags}>
+                    <Tag color={getDifficultyColor(question.difficulty)} className={styles.difficultyTag}>
+                      {getDifficultyLabel(question.difficulty)}
+                    </Tag>
+                    <Tag color="blue" className={styles.categoryTag}>{getTypeLabel(question.type)}</Tag>
+                    <span className={styles.errorCount}>错误次数：{question.wrongTimes}</span>
+                    {question.passRate !== null && question.passRate !== undefined && (
+                      <span className={styles.passRate}>通过率：{(question.passRate * 100).toFixed(0)}%</span>
+                    )}
+                    {question.usageCount !== null && question.usageCount !== undefined && (
+                      <span className={styles.usageCount}>使用次数：{question.usageCount}</span>
+                    )}
+                  </div>
+                  <div className={styles.metaInfo}>
+                    {question.creatorName && (
+                      <span className={styles.creator}>出题人：{question.creatorName}</span>
+                    )}
+                    <span className={styles.lastErrorDate}>最近错误：{new Date(question.lastWrongTime).toLocaleDateString()}</span>
+                    <Dropdown overlay={moreMenu(question.questionId)} trigger={['click']} placement="bottomRight">
+                      <Button type="text" icon={<MoreOutlined />} className={styles.moreButton} />
+                    </Dropdown>
                   </div>
                 </div>
 
-                {/* 相关知识点 */}
-                <div className={styles.relatedKnowledge}>
-                  <h4>相关知识点</h4>
-                  <ul>
-                    {question.relatedKnowledge.map((knowledge, index) => (
-                      <li key={index}>{knowledge}</li>
-                    ))}
-                  </ul>
+                <div className={styles.questionContent}>
+                  <div className={styles.questionText}>
+                    <span className={styles.questionNumber}>{question.questionId}.</span>
+                    {question.content}
+                  </div>
+                  
+                  {/* 显示选项内容 */}
+                  {question.options && question.options.length > 0 && (
+                    <div className={styles.optionsContainer}>
+                      {question.options.map((option: any) => (
+                        <div key={option.optionId} className={styles.optionItem}>
+                          <span className={styles.optionKey}>{option.optionKey}. </span>
+                          <span className={styles.optionValue}>{option.optionValue}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* 显示正确答案和解析 */}
+                  {question.correctAnswer && (
+                    <div className={styles.answerAndAnalysis}>
+                      <div className={styles.correctAnswer}>
+                        <span className={styles.label}>正确答案：</span>
+                        <span className={styles.value}>{question.correctAnswer}</span>
+                      </div>
+                      {question.analysis && (
+                        <div className={styles.analysis}>
+                          <span className={styles.label}>解析：</span>
+                          <span className={styles.value}>{question.analysis}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* 显示知识点标签 */}
+                  {question.knowledgePoints && question.knowledgePoints.length > 0 && (
+                    <div className={styles.knowledgePointsContainer}>
+                      <span className={styles.knowledgePointsLabel}>知识点：</span>
+                      {question.knowledgePoints.map((kp: any) => (
+                        <Tag key={kp.id || kp.knowledgePointId} color="processing" className={styles.knowledgePointTag}>
+                          {kp.name}
+                        </Tag>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              <div className={styles.cardFooter}>
-                <div className={styles.actions}>
-                  <Button type="text" icon={<StarOutlined />} className={styles.actionButton}>
-                    收藏
-                  </Button>
-                  <Button type="text" icon={<MessageOutlined />} className={styles.actionButton}>
-                    讨论({question.discussionCount})
-                  </Button>
+                <div className={styles.cardFooter}>
+                  <div className={styles.actions}>
+                    <Button type="text" icon={<StarOutlined />} className={styles.actionButton}>
+                      收藏
+                    </Button>
+                    <Button type="text" icon={<MessageOutlined />} className={styles.actionButton}>
+                      讨论
+                    </Button>
+                  </div>
+                  <div className={styles.mainActions}>
+                    <Button className={styles.retryButton} onClick={() => handleRetry(question.questionId)}>
+                      再做一遍
+                    </Button>
+                    <Button type="primary" danger className={styles.removeButton} onClick={() => handleRemoveFromWrongBook(question.questionId)}>
+                      从错题本移除
+                    </Button>
+                  </div>
                 </div>
-                <div className={styles.mainActions}>
-                  <Button className={styles.retryButton} onClick={() => handleRetry(question.id)}>
-                    再做一遍
-                  </Button>
-                  <Button type="primary" className={styles.masteredButton} onClick={() => handleMarkAsMastered(question.id)}>
-                    标记为已掌握
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))
+          ) : (
+            <Empty description="暂无错题" />
+          )}
         </div>
 
         {/* 分页 */}
-        <div className={styles.pagination}>
-          <Pagination 
-            current={currentPage}
-            total={50}
-            pageSize={pageSize}
-            onChange={handlePageChange}
-            showSizeChanger={false}
-          />
-        </div>
+        {wrongQuestionsTotal > 0 && (
+          <div className={styles.pagination}>
+            <Pagination 
+              current={wrongQuestionsCurrentPage}
+              total={wrongQuestionsTotal}
+              pageSize={10}
+              onChange={handlePageChange}
+              showSizeChanger={false}
+            />
+          </div>
+        )}
       </div>
     </MainLayout>
   );

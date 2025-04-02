@@ -43,6 +43,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     '/admin/users': '用户管理',
     '/admin/users/roles': '角色管理',
     '/admin/exams': '考试管理',
+    '/admin/exams/new': '创建考试',
     '/admin/exams/detail': '考试详情',
     '/admin/questions': '题库管理',
     '/admin/questions/list': '题目列表',
@@ -175,7 +176,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       >
         <div className="logo">
           <img
-            src="/logo.png"
+            src="/ytjx.png"
             alt="Logo"
             style={{
               height: 32,
