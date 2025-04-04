@@ -38,6 +38,35 @@ import styles from './ExamMock.module.scss';
 
 const { Title, Text, Paragraph } = Typography;
 
+// 定义API返回的考试数据接口
+interface ExamData {
+  examId: number;
+  examName: string;
+  examDesc: string;
+  examStartTime: string;
+  examEndTime: string;
+  duration: number;
+  totalScore: number;
+  passScore: number;
+  status: number;
+  createAt: string;
+  updateAt: string;
+  creatorId: number;
+  creatorName: string;
+  participantCount: number;
+  questions: any[] | null;
+}
+
+// 定义API返回的数据结构
+interface ApiResponse {
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    list: ExamData[];
+  };
+}
+
 // 侧边栏内容
 const SidebarContent = () => {
   return (
@@ -139,9 +168,38 @@ const ExamMockPage: React.FC = () => {
   const fetchOngoingExams = async () => {
     setLoading(true);
     try {
-      const response = await getExams({ status: ExamStatus.ONGOING });
+      // 获取全部考试，因为前端可能需要显示各种状态的考试
+      const response = await getExams({}) as unknown as ApiResponse;
       if (response.code === 200 && response.data) {
-        setExams(response.data.records || []);
+        // 获取考试列表
+        const examsList = response.data.list || [];
+        
+        // 更新考试状态 - 基于当前时间判断实际状态
+        const now = new Date();
+        const updatedExams = examsList.map((exam: ExamData) => {
+          const startTime = new Date(exam.examStartTime);
+          const endTime = new Date(exam.examEndTime);
+          
+          let actualStatus = exam.status;
+          if (now < startTime) {
+            actualStatus = ExamStatus.UPCOMING;
+          } else if (now > endTime) {
+            actualStatus = ExamStatus.ENDED;
+          } else {
+            actualStatus = ExamStatus.ONGOING;
+          }
+          
+          return { 
+            ...exam, 
+            status: actualStatus,
+            name: exam.examName,
+            description: exam.examDesc,
+            startTime: exam.examStartTime,
+            endTime: exam.examEndTime
+          };
+        });
+        
+        setExams(updatedExams);
         setError(null);
       } else {
         setError(response.message || '获取考试列表失败');
@@ -158,21 +216,25 @@ const ExamMockPage: React.FC = () => {
   const loadHistoryExams = async () => {
     try {
       // 获取已结束的考试
-      const response = await getExams({ status: ExamStatus.ENDED });
+      const response = await getExams({ status: ExamStatus.ENDED }) as unknown as ApiResponse;
       if (response.code === 200 && response.data) {
-        const endedExams = response.data.records || [];
+        const endedExams = response.data.list || [];
         const historyData = [];
         
-        for (const exam of endedExams.slice(0, 3)) { // 取前3个
+        for (const exam of endedExams.slice(0, 5)) { // 取前5个
           try {
             const resultResponse = await getExamResult(exam.examId);
             if (resultResponse.code === 200 && resultResponse.data) {
+              const resultData = resultResponse.data;
               historyData.push({
                 id: exam.examId,
-                title: exam.name,
-                date: new Date(exam.endTime).toISOString().slice(0, 10),
-                score: resultResponse.data.score,
-                ranking: `Top ${Math.round(100 - (resultResponse.data.percentile || 0))}%`
+                title: exam.examName,
+                date: new Date(resultData.submitTime || exam.examEndTime).toLocaleDateString(),
+                score: resultData.score,
+                totalScore: resultData.totalScore,
+                ranking: resultData.rank ? 
+                  `第${resultData.rank}名` : 
+                  (resultData.percentile ? `Top ${Math.round(100 - resultData.percentile)}%` : '-')
               });
             }
           } catch (err) {
@@ -211,7 +273,9 @@ const ExamMockPage: React.FC = () => {
       title: '得分',
       dataIndex: 'score',
       key: 'score',
-      render: (score: number) => <span className={styles.examScore}>{score}</span>
+      render: (score: number, record: any) => (
+        <span className={styles.examScore}>{score}/{record.totalScore}</span>
+      )
     },
     {
       title: '排名',
@@ -252,6 +316,19 @@ const ExamMockPage: React.FC = () => {
   const handleParticipate = async () => {
     if (!selectedExamId) return;
     
+    const exam = exams.find(exam => exam.examId === selectedExamId);
+    if (!exam) return;
+
+    // 检查考试是否已经开始
+    const now = new Date();
+    const startTime = new Date(exam.startTime);
+    
+    if (now < startTime) {
+      message.warning('考试尚未开始，请等待考试开始后再参加');
+      setIsModalVisible(false);
+      return;
+    }
+    
     setSubmitting(true);
     try {
       const response = await participateExam(selectedExamId);
@@ -275,27 +352,23 @@ const ExamMockPage: React.FC = () => {
   
   // 格式化剩余时间
   const formatRemainingTime = (exam: any) => {
-    // 检查考试状态，但不改变原始数据的状态属性
+    // 考试已经结束的情况
+    if (exam.status === ExamStatus.ENDED) {
+      return '已结束';
+    }
+    
+    // 考试未开始的情况
+    if (exam.status === ExamStatus.UPCOMING) {
+      return '未开始';
+    }
+    
+    // 考试正在进行中，计算剩余时间
     const now = new Date();
-    const startTime = new Date(exam.startTime);
     const endTime = new Date(exam.endTime);
-    
-    // 获取实际状态
-    let actualStatus = exam.status;
-    if (now < startTime) {
-      actualStatus = ExamStatus.UPCOMING;
-    } else if (now > endTime) {
-      actualStatus = ExamStatus.ENDED;
-    } else {
-      actualStatus = ExamStatus.ONGOING;
-    }
-    
-    if (actualStatus !== ExamStatus.ONGOING) {
-      return actualStatus === ExamStatus.UPCOMING ? '未开始' : '已结束';
-    }
     
     const diffMs = endTime.getTime() - now.getTime();
     
+    // 考试已经结束的情况
     if (diffMs <= 0) {
       return '已结束';
     }
@@ -448,6 +521,16 @@ const ExamMockPage: React.FC = () => {
                       <div className={styles.examDescription}>
                         {exam.description}
                       </div>
+                      <div className={styles.examTime}>
+                        <div className={styles.timeItem}>
+                          <ClockCircleOutlined />
+                          <span>开始时间：{new Date(exam.startTime).toLocaleString()}</span>
+                        </div>
+                        <div className={styles.timeItem}>
+                          <ClockCircleOutlined />
+                          <span>结束时间：{new Date(exam.endTime).toLocaleString()}</span>
+                        </div>
+                      </div>
                       <div className={styles.examDetails}>
                         <div className={styles.detailItem}>
                           <ClockCircleOutlined />
@@ -464,12 +547,18 @@ const ExamMockPage: React.FC = () => {
                       </div>
                     </div>
                     <div className={styles.examActions}>
-                      <Button 
-                        type="primary" 
-                        onClick={() => showExamInfoModal(exam.examId)}
-                      >
-                        参加考试
-                      </Button>
+                      {new Date(exam.startTime) > new Date() ? (
+                        <Button disabled>
+                          考试未开始
+                        </Button>
+                      ) : (
+                        <Button 
+                          type="primary" 
+                          onClick={() => showExamInfoModal(exam.examId)}
+                        >
+                          参加考试
+                        </Button>
+                      )}
                       <Button type="link" icon={<InfoCircleOutlined />}>
                         查看详情
                       </Button>

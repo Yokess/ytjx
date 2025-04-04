@@ -6,706 +6,646 @@ import {
   Section,
   UserInfo,
   PostDetail,
-  CommentReply,
   Comment,
+  CommentReply,
   PostsQueryParams,
-  CreatePostParams,
-  CreateCommentParams,
-  CreateReplyParams
+  CreatePostDTO,
+  CreateCommentDTO,
+  CreateReportDTO,
+  PostReport,
+  PageResult
 } from '../types/community';
+import http from './http';
 
-// 延迟函数
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// 模拟数据
-const mockColumns: Column[] = [
-  {
-    id: 1,
-    title: '考研数学进阶指南',
-    cover: 'linear-gradient(to right, #4f46e5, #3b82f6)',
-    author: {
-      id: '101',
-      name: '李教授',
-      avatar: 'https://joeschmoe.io/api/v1/random',
-      title: '北京大学数学系'
-    },
-    description: '从基础到高阶，全面解析考研数学常见难点和解题技巧，助你攻克数学难关。',
-    articles: 12,
-    views: 3200
-  },
-  {
-    id: 2,
-    title: '英语写作高分技巧',
-    cover: 'linear-gradient(to right, #8b5cf6, #ec4899)',
-    author: {
-      id: '102',
-      name: '王老师',
-      avatar: 'https://joeschmoe.io/api/v1/random',
-      title: '复旦大学外语学院'
-    },
-    description: '掌握考研英语写作的核心技巧，从词汇、句型到文章结构，全方位提升你的英语写作能力。',
-    articles: 8,
-    views: 2800
-  },
-  {
-    id: 3,
-    title: '考研心理调适指南',
-    cover: 'linear-gradient(to right, #10b981, #0d9488)',
-    author: {
-      id: '103',
-      name: '张心理师',
-      avatar: 'https://joeschmoe.io/api/v1/random',
-      title: '清华大学心理学系'
-    },
-    description: '如何在备考期间保持良好的心态，应对压力和焦虑，提高学习效率和考试表现。',
-    articles: 6,
-    views: 1900
-  }
-];
-
-const mockPosts: Post[] = [
-  {
-    id: 1,
-    title: '2025年考研大纲变化解析及备考建议',
-    tags: ['置顶', '官方', '精华'],
-    tagColors: ['red', 'blue', 'green'],
-    author: {
-      id: '201',
-      name: '研途九霄官方',
-      avatar: 'https://joeschmoe.io/api/v1/random'
-    },
-    date: '2024-05-15',
-    views: 5600,
-    comments: 128,
-    likes: 320,
-    isOfficial: true
-  },
-  {
-    id: 2,
-    title: '数学中的泰勒公式如何理解和应用？',
-    content: '我在复习高数时遇到了泰勒公式，但对其几何意义和应用场景不太理解，特别是在求极限和近似计算方面，有没有简单易懂的解释和例子？',
-    tags: ['问答讨论', '已解决'],
-    tagColors: ['blue', 'green'],
-    author: {
-      id: '202',
-      name: '李同学',
-      avatar: 'https://joeschmoe.io/api/v1/random'
-    },
-    date: '2024-05-18',
-    views: 342,
-    comments: 16,
-    likes: 45,
-    postTags: ['高等数学', '泰勒公式']
-  },
-  {
-    id: 3,
-    title: '从二本到清华：我的考研逆袭之路',
-    content: '作为一名普通二本院校的学生，我用一年时间考入清华大学计算机专业。这篇文章分享我的备考经验、学习方法和心态调整技巧，希望能给正在备考的同学一些启发和鼓励。',
-    tags: ['经验分享', '精华'],
-    tagColors: ['green', 'yellow'],
-    author: {
-      id: '203',
-      name: '王同学',
-      avatar: 'https://joeschmoe.io/api/v1/random'
-    },
-    date: '2024-05-10',
-    views: 2100,
-    comments: 86,
-    likes: 230,
-    postTags: ['考研经验', '逆袭', '清华大学']
-  },
-  {
-    id: 4,
-    title: '2025年北京高校计算机专业考研分析',
-    content: '详细分析北京地区各高校计算机专业的招生情况、考试科目、录取分数线变化趋势以及就业前景，帮助大家选择适合自己的目标院校。',
-    tags: ['院校信息'],
-    tagColors: ['orange'],
-    author: {
-      id: '204',
-      name: '赵同学',
-      avatar: 'https://joeschmoe.io/api/v1/random'
-    },
-    date: '2024-05-12',
-    views: 1500,
-    comments: 42,
-    likes: 98,
-    postTags: ['北京高校', '计算机专业', '分数线']
-  },
-  {
-    id: 5,
-    title: '【北京】考研英语学习小组招募',
-    content: '我们是一群备战2025年考研的同学，现招募英语学习小组成员，每周线上+线下结合学习，互相督促，共同进步。要求有一定英语基础，能坚持每天打卡学习。',
-    tags: ['学习小组', '招募中'],
-    tagColors: ['purple', 'blue'],
-    author: {
-      id: '205',
-      name: '林同学',
-      avatar: 'https://joeschmoe.io/api/v1/random'
-    },
-    date: '2024-05-16',
-    views: 328,
-    comments: 24,
-    likes: 36,
-    postTags: ['英语学习', '北京', '2025考研']
-  }
-];
-
-const mockSections: Section[] = [
-  { name: '问答讨论', icon: 'MessageOutlined', count: 328, color: 'blue' },
-  { name: '经验分享', icon: 'StarOutlined', count: 156, color: 'green' },
-  { name: '院校信息', icon: 'LikeOutlined', count: 92, color: 'cyan' },
-  { name: '学习小组', icon: 'TeamOutlined', count: 64, color: 'purple' },
-  { name: '考研资讯', icon: 'NotificationOutlined', count: 108, color: 'red' }
-];
-
-const mockHotTags: string[] = [
-  '数学', '英语', '政治', '专业课', '复习计划', 
-  '考研经验', '北京大学', '清华大学', '复旦大学', '学习方法'
-];
-
-const mockUserInfo: UserInfo = {
-  id: '301',
-  name: '张同学',
-  avatar: 'https://joeschmoe.io/api/v1/random',
-  points: 1280,
-  major: '数学专业',
-  posts: 42,
-  replies: 128,
-  favorites: 56
-};
-
-const mockPostDetail: PostDetail = {
-  id: '1',
-  title: '考研数学复习经验分享：如何在三个月内提高100分',
-  content: `
-    <p>大家好，我是一名刚刚结束考研的学生，数学从最初的模拟考试60分提升到了考试的160分。在这里分享一下我的复习经验，希望对大家有所帮助。</p>
-    
-    <h3>一、基础阶段（第1-4周）</h3>
-    <p>这个阶段主要是打基础，我采用的方法是：</p>
-    <ol>
-      <li>通读教材，掌握基本概念和定理</li>
-      <li>做基础题，巩固概念理解</li>
-      <li>整理错题，建立错题本</li>
-    </ol>
-    
-    <h3>二、强化阶段（第5-8周）</h3>
-    <p>这个阶段主要是强化训练，我采用的方法是：</p>
-    <ol>
-      <li>刷题，大量刷题，特别是历年真题</li>
-      <li>归纳总结解题方法和技巧</li>
-      <li>定期复习错题本</li>
-    </ol>
-    
-    <h3>三、冲刺阶段（第9-12周）</h3>
-    <p>这个阶段主要是查漏补缺，我采用的方法是：</p>
-    <ol>
-      <li>模拟考试，找出薄弱环节</li>
-      <li>针对性强化训练</li>
-      <li>调整心态，保持良好的状态</li>
-    </ol>
-    
-    <p>最后，我想说的是，考研数学不是难题，关键是方法得当，坚持不懈。希望大家都能取得好成绩！</p>
-  `,
-  author: {
-    id: '101',
-    name: '数学大神',
-    avatar: 'https://joeschmoe.io/api/v1/random',
-    level: 5,
-    title: '研究生考生',
-    postCount: 32,
-    followersCount: 128
-  },
-  createTime: '2024-05-15 14:30',
-  updateTime: '2024-05-15 16:45',
-  viewCount: 1256,
-  likeCount: 89,
-  favoriteCount: 45,
-  commentCount: 23,
-  tags: ['数学', '考研经验', '学习方法'],
-  section: '经验交流',
-  isLiked: false,
-  isFavorited: false
-};
-
-const mockComments: Comment[] = [
-  {
-    id: '1',
-    author: {
-      id: '201',
-      name: '考研小白',
-      avatar: 'https://joeschmoe.io/api/v1/random',
-      level: 2
-    },
-    content: '感谢分享！请问基础特别差的话，三个月时间够吗？',
-    createTime: '2024-05-15 15:10',
-    likeCount: 12,
-    isLiked: false,
-    replies: [
-      {
-        id: '1-1',
-        author: {
-          id: '101',
-          name: '数学大神',
-          avatar: 'https://joeschmoe.io/api/v1/random',
-          level: 5
-        },
-        content: '基础差的话，建议先用2-3周时间专门补基础，然后再按照我的计划走。关键是要找到自己的薄弱点，有针对性地强化训练。',
-        createTime: '2024-05-15 15:30',
-        likeCount: 8,
-        isLiked: false
-      }
-    ]
-  },
-  {
-    id: '2',
-    author: {
-      id: '202',
-      name: '高数爱好者',
-      avatar: 'https://joeschmoe.io/api/v1/random',
-      level: 4
-    },
-    content: '这个方法真的有效！我也是按照类似的方法，数学从70多分提高到了140分。特别是错题本的方法，非常有用。',
-    createTime: '2024-05-15 16:20',
-    likeCount: 15,
-    isLiked: true,
-    replies: []
-  },
-  {
-    id: '3',
-    author: {
-      id: '203',
-      name: '即将上岸',
-      avatar: 'https://joeschmoe.io/api/v1/random',
-      level: 3
-    },
-    content: '请问楼主用的是什么教材和参考书啊？能推荐一下吗？',
-    createTime: '2024-05-15 17:45',
-    likeCount: 5,
-    isLiked: false,
-    replies: [
-      {
-        id: '3-1',
-        author: {
-          id: '101',
-          name: '数学大神',
-          avatar: 'https://joeschmoe.io/api/v1/random',
-          level: 5
-        },
-        content: '我用的是《高等数学》（同济第七版）作为基础教材，参考书主要是张宇的《数学基础过关660题》和《数学真题大全解》。此外，我还做了李永乐的模拟卷。',
-        createTime: '2024-05-15 18:10',
-        likeCount: 10,
-        isLiked: false
-      },
-      {
-        id: '3-2',
-        author: {
-          id: '203',
-          name: '即将上岸',
-          avatar: 'https://joeschmoe.io/api/v1/random',
-          level: 3
-        },
-        content: '谢谢分享！我马上去买这些书。',
-        createTime: '2024-05-15 18:30',
-        likeCount: 2,
-        isLiked: false,
-        replyTo: {
-          id: '101',
-          name: '数学大神'
-        }
-      }
-    ]
-  }
-];
-
-// API实现
 /**
- * 获取专栏列表
+ * 获取社区板块列表
+ * @returns 社区板块列表
  */
-export const getColumns = async (params?: { page?: number; pageSize?: number }): Promise<ApiResponse<{ total: number; columns: Column[] }>> => {
-  await delay(600);
-  
-  const page = params?.page || 1;
-  const pageSize = params?.pageSize || 10;
-  const total = mockColumns.length;
-  
-  return {
-    code: 200,
-    message: '获取成功',
-    data: {
-      total,
-      columns: mockColumns.slice((page - 1) * pageSize, page * pageSize)
+export const getSections = async (): Promise<ApiResponse<Section[]>> => {
+  try {
+    const response = await http.get('/community/sections');
+    return response.data;
+  } catch (error) {
+    console.error('获取社区板块失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 创建社区板块
+ * @param sectionData 板块数据
+ * @returns 创建结果
+ */
+export const createSection = async (sectionData: { sectionName: string; sectionDescription: string }): Promise<any> => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      return {
+        success: false,
+        message: '未登录状态'
+      };
     }
-  };
+    
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      }
+    };
+    
+    const response = await http.post('/admin/community/sections', sectionData, config);
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('创建板块失败:', error);
+    return {
+      success: false,
+      message: error.response?.data?.msg || '创建板块失败'
+    };
+  }
+};
+
+/**
+ * 更新社区板块
+ * @param sectionId 板块ID
+ * @param sectionData 板块数据
+ * @returns 更新结果
+ */
+export const updateSection = async (sectionId: number, sectionData: { sectionName: string; sectionDescription: string }): Promise<any> => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      return {
+        success: false,
+        message: '未登录状态'
+      };
+    }
+    
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      }
+    };
+    
+    const response = await http.put(`/admin/community/sections/${sectionId}`, sectionData, config);
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('更新板块失败:', error);
+    return {
+      success: false,
+      message: error.response?.data?.msg || '更新板块失败'
+    };
+  }
+};
+
+/**
+ * 删除社区板块
+ * @param sectionId 板块ID
+ * @returns 删除结果
+ */
+export const deleteSection = async (sectionId: number): Promise<any> => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      return {
+        success: false,
+        message: '未登录状态'
+      };
+    }
+    
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      }
+    };
+    
+    const response = await http.delete(`/admin/community/sections/${sectionId}`, config);
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('删除板块失败:', error);
+    return {
+      success: false,
+      message: error.response?.data?.msg || '删除板块失败'
+    };
+  }
 };
 
 /**
  * 获取帖子列表
+ * @param params 查询参数
+ * @returns 分页的帖子列表
  */
-export const getPosts = async (params?: PostsQueryParams): Promise<ApiResponse<{ total: number; posts: Post[] }>> => {
-  await delay(800);
-  
-  const page = params?.page || 1;
-  const pageSize = params?.pageSize || 10;
-  let filteredPosts = [...mockPosts];
-  
-  // 按照板块筛选
-  if (params?.section && params.section !== 'all') {
-    filteredPosts = filteredPosts.filter(post => 
-      post.tags.some(tag => tag === params.section)
-    );
+export const getPosts = async (params: PostsQueryParams): Promise<ApiResponse<PageResult<Post>>> => {
+  try {
+    console.log('[API] getPosts 被调用，原始参数:', params);
+    
+    // 删除值为undefined或空字符串的参数
+    const cleanParams = Object.entries(params).reduce((acc: any, [key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+    
+    console.log('[API] getPosts 清理后的参数:', cleanParams);
+    console.log('[API] 请求URL:', '/community/posts');
+    
+    const response = await http.get('/community/posts', { params: cleanParams });
+    
+    console.log('[API] getPosts 响应状态:', response.status);
+    console.log('[API] getPosts 响应数据:', response.data);
+    
+    return response.data;
+  } catch (error) {
+    console.error('[API] getPosts 请求失败:', error);
+    throw error;
   }
-  
-  // 按照标签筛选
-  if (params?.tag) {
-    filteredPosts = filteredPosts.filter(post => 
-      post.tags.includes(params.tag!) || 
-      (post.postTags && post.postTags.includes(params.tag!))
-    );
-  }
-  
-  // 按照关键词搜索
-  if (params?.keyword) {
-    const keyword = params.keyword.toLowerCase();
-    filteredPosts = filteredPosts.filter(post => 
-      post.title.toLowerCase().includes(keyword) || 
-      (post.content && post.content.toLowerCase().includes(keyword))
-    );
-  }
-  
-  // 排序
-  if (params?.sortBy) {
-    switch (params.sortBy) {
-      case 'hot':
-        filteredPosts.sort((a, b) => b.views - a.views);
-        break;
-      case 'featured':
-        filteredPosts = filteredPosts.filter(post => 
-          post.tags.includes('精华') || post.tags.includes('置顶')
-        );
-        break;
-      case 'latest':
-      default:
-        // 默认已经是按时间排序的
-        break;
-    }
-  }
-  
-  const total = filteredPosts.length;
-  
-  return {
-    code: 200,
-    message: '获取成功',
-    data: {
-      total,
-      posts: filteredPosts.slice((page - 1) * pageSize, page * pageSize)
-    }
-  };
-};
-
-/**
- * 获取社区板块数据
- */
-export const getSections = async (): Promise<ApiResponse<Section[]>> => {
-  await delay(400);
-  
-  return {
-    code: 200,
-    message: '获取成功',
-    data: mockSections
-  };
-};
-
-/**
- * 获取热门标签
- */
-export const getHotTags = async (params?: { limit?: number }): Promise<ApiResponse<string[]>> => {
-  await delay(300);
-  
-  const limit = params?.limit || mockHotTags.length;
-  
-  return {
-    code: 200,
-    message: '获取成功',
-    data: mockHotTags.slice(0, limit)
-  };
-};
-
-/**
- * 获取用户信息
- */
-export const getCommunityUserInfo = async (): Promise<ApiResponse<UserInfo>> => {
-  await delay(500);
-  
-  return {
-    code: 200,
-    message: '获取成功',
-    data: mockUserInfo
-  };
-};
-
-/**
- * 创建新帖子
- */
-export const createPost = async (params: CreatePostParams): Promise<ApiResponse<{ id: number; title: string }>> => {
-  await delay(1000);
-  
-  const newPost = {
-    id: mockPosts.length + 1,
-    title: params.title
-  };
-  
-  return {
-    code: 200,
-    message: '发布成功',
-    data: newPost
-  };
 };
 
 /**
  * 获取帖子详情
+ * @param postId 帖子ID
+ * @param userId 用户ID (可选)
+ * @returns 帖子详情
  */
-export const getPostDetail = async (postId: string): Promise<ApiResponse<PostDetail>> => {
-  await delay(700);
-  
-  // 这里简单处理，实际应该根据postId查找对应的帖子
-  return {
-    code: 200,
-    message: '获取成功',
-    data: mockPostDetail
-  };
+export const getPostById = async (postId: number, userId?: number): Promise<ApiResponse<PostDetail>> => {
+  try {
+    const response = await http.get(`/community/posts/${postId}`);
+    return response.data;
+  } catch (error) {
+    console.error('获取帖子详情失败:', error);
+    throw error;
+  }
 };
 
 /**
- * 获取帖子评论
+ * 创建帖子
+ * @param postDto 帖子数据
+ * @returns 创建的帖子
  */
-export const getPostComments = async (
-  postId: string, 
-  params?: { page?: number; pageSize?: number }
-): Promise<ApiResponse<{ total: number; comments: Comment[] }>> => {
-  await delay(600);
-  
-  const page = params?.page || 1;
-  const pageSize = params?.pageSize || 10;
-  const total = mockComments.length;
-  
-  return {
-    code: 200,
-    message: '获取成功',
-    data: {
-      total,
-      comments: mockComments.slice((page - 1) * pageSize, page * pageSize)
+export const createPost = async (postDto: CreatePostDTO): Promise<ApiResponse<Post>> => {
+  try {
+    const response = await http.post('/community/posts', postDto);
+    return response.data;
+  } catch (error) {
+    console.error('创建帖子失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 更新帖子
+ * @param postId 帖子ID
+ * @param postDto 帖子数据
+ * @returns 更新后的帖子
+ */
+export const updatePost = async (postId: number, postDto: CreatePostDTO): Promise<ApiResponse<Post>> => {
+  try {
+    const response = await http.put(`/community/posts/${postId}`, postDto);
+    return response.data;
+  } catch (error) {
+    console.error('更新帖子失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 删除帖子
+ * @param postId 帖子ID
+ * @returns 操作结果
+ */
+export const deletePost = async (postId: number): Promise<ApiResponse<null>> => {
+  try {
+    // 获取token
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      return {
+        code: 401,
+        message: '未登录状态',
+        data: null
+      };
     }
-  };
+    
+    // 设置请求头
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      }
+    };
+    
+    const response = await http.delete(`/community/posts/${postId}`, config);
+    console.log('[API] deletePost 响应:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('删除帖子失败:', error);
+    throw error;
+  }
 };
 
 /**
  * 点赞帖子
+ * @param postId 帖子ID
+ * @returns 操作结果
  */
-export const likePost = async (postId: string): Promise<ApiResponse<{ isLiked: boolean; likeCount: number }>> => {
-  await delay(300);
-  
-  const isLiked = !mockPostDetail.isLiked;
-  const likeCount = isLiked 
-    ? mockPostDetail.likeCount + 1 
-    : mockPostDetail.likeCount - 1;
-  
-  // 更新模拟数据
-  mockPostDetail.isLiked = isLiked;
-  mockPostDetail.likeCount = likeCount;
-  
-  return {
-    code: 200,
-    message: isLiked ? '点赞成功' : '取消点赞成功',
-    data: {
-      isLiked,
-      likeCount
-    }
-  };
+export const likePost = async (postId: number): Promise<ApiResponse<null>> => {
+  try {
+    const response = await http.post(`/community/posts/${postId}/like`);
+    return response.data;
+  } catch (error) {
+    console.error('点赞帖子失败:', error);
+    throw error;
+  }
 };
 
 /**
- * 收藏帖子
+ * 取消点赞帖子
+ * @param postId 帖子ID
+ * @returns 操作结果
  */
-export const favoritePost = async (postId: string): Promise<ApiResponse<{ isFavorited: boolean; favoriteCount: number }>> => {
-  await delay(300);
-  
-  const isFavorited = !mockPostDetail.isFavorited;
-  const favoriteCount = isFavorited 
-    ? mockPostDetail.favoriteCount + 1 
-    : mockPostDetail.favoriteCount - 1;
-  
-  // 更新模拟数据
-  mockPostDetail.isFavorited = isFavorited;
-  mockPostDetail.favoriteCount = favoriteCount;
-  
-  return {
-    code: 200,
-    message: isFavorited ? '收藏成功' : '取消收藏成功',
-    data: {
-      isFavorited,
-      favoriteCount
-    }
-  };
+export const unlikePost = async (postId: number): Promise<ApiResponse<null>> => {
+  try {
+    const response = await http.post(`/community/posts/${postId}/unlike`);
+    return response.data;
+  } catch (error) {
+    console.error('取消点赞帖子失败:', error);
+    throw error;
+  }
 };
 
 /**
- * 发表评论
+ * 获取评论列表
+ * @param postId 帖子ID
+ * @param pageNum 页码
+ * @param pageSize 每页数量
+ * @returns 分页的评论列表
  */
-export const createComment = async (
-  postId: string, 
-  params: CreateCommentParams
-): Promise<ApiResponse<Comment>> => {
-  await delay(800);
-  
-  const newComment: Comment = {
-    id: (mockComments.length + 1).toString(),
-    author: {
-      id: mockUserInfo.id,
-      name: mockUserInfo.name,
-      avatar: mockUserInfo.avatar,
-      level: 3
-    },
-    content: params.content,
-    createTime: new Date().toLocaleString(),
-    likeCount: 0,
-    isLiked: false,
-    replies: []
-  };
-  
-  // 更新模拟数据
-  mockComments.unshift(newComment);
-  mockPostDetail.commentCount += 1;
-  
-  return {
-    code: 200,
-    message: '评论成功',
-    data: newComment
-  };
+export const getComments = async (postId: number, pageNum: number, pageSize: number): Promise<ApiResponse<PageResult<Comment>>> => {
+  try {
+    const response = await http.get('/community/comments', {
+      params: { postId, pageNum, pageSize }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('获取评论列表失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 获取评论回复列表
+ * @param commentId 评论ID
+ * @returns 评论回复列表
+ */
+export const getCommentReplies = async (commentId: number): Promise<ApiResponse<CommentReply[]>> => {
+  try {
+    const response = await http.get(`/community/comments/${commentId}/replies`);
+    return response.data;
+  } catch (error) {
+    console.error('获取评论回复失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 创建评论
+ * @param commentDto 评论数据
+ * @returns 创建的评论
+ */
+export const createComment = async (commentDto: CreateCommentDTO): Promise<ApiResponse<Comment>> => {
+  try {
+    const response = await http.post('/community/comments', commentDto);
+    return response.data;
+  } catch (error) {
+    console.error('创建评论失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 删除评论
+ * @param commentId 评论ID
+ * @returns 操作结果
+ */
+export const deleteComment = async (commentId: number): Promise<ApiResponse<null>> => {
+  try {
+    const response = await http.delete(`/community/comments/${commentId}`);
+    return response.data;
+  } catch (error) {
+    console.error('删除评论失败:', error);
+    throw error;
+  }
 };
 
 /**
  * 点赞评论
+ * @param commentId 评论ID
+ * @returns 操作结果
  */
-export const likeComment = async (commentId: string): Promise<ApiResponse<{ isLiked: boolean; likeCount: number }>> => {
-  await delay(300);
-  
-  let targetComment: Comment | CommentReply | undefined;
-  
-  // 查找评论
-  for (const comment of mockComments) {
-    if (comment.id === commentId) {
-      targetComment = comment;
-      break;
-    }
-    
-    // 查找回复
-    for (const reply of comment.replies) {
-      if (reply.id === commentId) {
-        targetComment = reply;
-        break;
-      }
-    }
-    
-    if (targetComment) break;
+export const likeComment = async (commentId: number): Promise<ApiResponse<null>> => {
+  try {
+    const response = await http.post(`/community/comments/${commentId}/like`);
+    return response.data;
+  } catch (error) {
+    console.error('点赞评论失败:', error);
+    throw error;
   }
-  
-  if (!targetComment) {
-    return {
-      code: 404,
-      message: '评论不存在',
-      data: { isLiked: false, likeCount: 0 }
-    };
-  }
-  
-  const isLiked = !targetComment.isLiked;
-  const likeCount = isLiked 
-    ? targetComment.likeCount + 1 
-    : targetComment.likeCount - 1;
-  
-  // 更新模拟数据
-  targetComment.isLiked = isLiked;
-  targetComment.likeCount = likeCount;
-  
-  return {
-    code: 200,
-    message: isLiked ? '点赞成功' : '取消点赞成功',
-    data: {
-      isLiked,
-      likeCount
-    }
-  };
 };
 
 /**
- * 回复评论
+ * 取消点赞评论
+ * @param commentId 评论ID
+ * @returns 操作结果
  */
-export const replyComment = async (
-  commentId: string, 
-  params: CreateReplyParams
-): Promise<ApiResponse<CommentReply>> => {
-  await delay(800);
-  
-  // 查找评论
-  const targetComment = mockComments.find(comment => comment.id === commentId);
-  
-  if (!targetComment) {
-    return {
-      code: 404,
-      message: '评论不存在',
-      data: null as any
-    };
+export const unlikeComment = async (commentId: number): Promise<ApiResponse<null>> => {
+  try {
+    const response = await http.post(`/community/comments/${commentId}/unlike`);
+    return response.data;
+  } catch (error) {
+    console.error('取消点赞评论失败:', error);
+    throw error;
   }
-  
-  // 构建回复数据
-  const newReply: CommentReply = {
-    id: `${commentId}-${targetComment.replies.length + 1}`,
-    author: {
-      id: mockUserInfo.id,
-      name: mockUserInfo.name,
-      avatar: mockUserInfo.avatar,
-      level: 3
-    },
-    content: params.content,
-    createTime: new Date().toLocaleString(),
-    likeCount: 0,
-    isLiked: false
-  };
-  
-  // 如果有指定回复用户
-  if (params.replyToUserId) {
-    // 在实际应用中这里应该查询用户信息
-    newReply.replyTo = {
-      id: params.replyToUserId,
-      name: '用户' + params.replyToUserId
-    };
+};
+
+/**
+ * 举报帖子
+ * @param reportDto 举报数据
+ * @returns 操作结果
+ */
+export const reportPost = async (reportDto: CreateReportDTO): Promise<ApiResponse<null>> => {
+  try {
+    const response = await http.post('/community/reports', reportDto);
+    return response.data;
+  } catch (error) {
+    console.error('举报帖子失败:', error);
+    throw error;
   }
-  
-  // 更新模拟数据
-  targetComment.replies.push(newReply);
-  mockPostDetail.commentCount += 1;
-  
-  return {
-    code: 200,
-    message: '回复成功',
-    data: newReply
-  };
+};
+
+/**
+ * 获取帖子举报列表
+ * @param postId 帖子ID
+ * @param pageNum 页码
+ * @param pageSize 每页数量
+ * @returns 分页的举报列表
+ */
+export const getReportsByPostId = async (postId: number, pageNum: number, pageSize: number): Promise<ApiResponse<PageResult<PostReport>>> => {
+  try {
+    const response = await http.get(`/community/reports/post/${postId}`, {
+      params: { pageNum, pageSize }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('获取帖子举报列表失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 设置帖子置顶状态
+ * @param postId 帖子ID
+ * @param isTop 是否置顶
+ * @returns 操作结果
+ */
+export const setPostTopStatus = async (postId: number, isTop: boolean): Promise<ApiResponse<null>> => {
+  try {
+    console.log('[API] 设置帖子置顶状态, postId:', postId, 'isTop:', isTop);
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('[API] setPostTopStatus 未找到token');
+      return {
+        code: 401,
+        message: '未登录状态',
+        data: null
+      };
+    }
+    
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      },
+      params: { isTop }
+    };
+    
+    console.log('[API] setPostTopStatus 请求配置:', config);
+    const response = await http.put(`/community/posts/${postId}/top`, null, config);
+    console.log('[API] setPostTopStatus 响应:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[API] 设置帖子置顶状态失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 设置帖子精华状态
+ * @param postId 帖子ID
+ * @param isEssence 是否精华
+ * @returns 操作结果
+ */
+export const setPostEssenceStatus = async (postId: number, isEssence: boolean): Promise<ApiResponse<null>> => {
+  try {
+    console.log('[API] 设置帖子精华状态, postId:', postId, 'isEssence:', isEssence);
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('[API] setPostEssenceStatus 未找到token');
+      return {
+        code: 401,
+        message: '未登录状态',
+        data: null
+      };
+    }
+    
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      },
+      params: { isEssence }
+    };
+    
+    console.log('[API] setPostEssenceStatus 请求配置:', config);
+    const response = await http.put(`/community/posts/${postId}/essence`, null, config);
+    console.log('[API] setPostEssenceStatus 响应:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[API] 设置帖子精华状态失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 禁止帖子回复
+ * @param postId 帖子ID
+ * @param isLocked 是否禁止回复
+ * @returns 操作结果
+ */
+export const setPostLockStatus = async (postId: number, isLocked: boolean): Promise<ApiResponse<null>> => {
+  try {
+    console.log('[API] 设置帖子锁定状态, postId:', postId, 'isLocked:', isLocked);
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('[API] setPostLockStatus 未找到token');
+      return {
+        code: 401,
+        message: '未登录状态',
+        data: null
+      };
+    }
+    
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      },
+      params: { isLocked }
+    };
+    
+    console.log('[API] setPostLockStatus 请求配置:', config);
+    
+    // 使用管理员接口
+    const response = await http.put(`/admin/community/posts/${postId}/lock`, null, config);
+    console.log('[API] setPostLockStatus 响应:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] 设置帖子禁止回复状态失败:', error);
+    // 自定义错误响应，以便前端统一处理
+    if (error.response?.status === 403) {
+      return {
+        code: 403,
+        message: '您没有操作权限',
+        data: null
+      };
+    }
+    throw error;
+  }
+};
+
+/**
+ * 隐藏帖子
+ * @param postId 帖子ID
+ * @param isHidden 是否隐藏
+ * @returns 操作结果
+ */
+export const setPostHiddenStatus = async (postId: number, isHidden: boolean): Promise<ApiResponse<null>> => {
+  try {
+    console.log('[API] 设置帖子隐藏状态, postId:', postId, 'isHidden:', isHidden);
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('[API] setPostHiddenStatus 未找到token');
+      return {
+        code: 401,
+        message: '未登录状态',
+        data: null
+      };
+    }
+    
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      },
+      params: { isHidden }
+    };
+    
+    console.log('[API] setPostHiddenStatus 请求配置:', config);
+    
+    // 使用管理员接口
+    const response = await http.put(`/admin/community/posts/${postId}/hide`, null, config);
+    console.log('[API] setPostHiddenStatus 响应:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] 设置帖子隐藏状态失败:', error);
+    // 自定义错误响应，以便前端统一处理
+    if (error.response?.status === 403) {
+      return {
+        code: 403,
+        message: '您没有操作权限',
+        data: null
+      };
+    }
+    throw error;
+  }
+};
+
+/**
+ * 处理帖子举报
+ * @param reportId 举报ID
+ * @param status 处理状态：1-已处理，2-已驳回
+ * @param remark 处理备注
+ * @returns 操作结果
+ */
+export const handlePostReport = async (reportId: number, status: number, remark: string): Promise<ApiResponse<null>> => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      return {
+        code: 401,
+        message: '未登录状态',
+        data: null
+      };
+    }
+    
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        satoken: token
+      }
+    };
+    
+    const data = {
+      status,
+      remark
+    };
+    
+    const response = await http.put(`/admin/community/reports/${reportId}`, data, config);
+    return response.data;
+  } catch (error) {
+    console.error('处理帖子举报失败:', error);
+    throw error;
+  }
 };
 
 // 导出所有API
 const communityApi = {
-  getColumns,
-  getPosts,
   getSections,
-  getHotTags,
-  getCommunityUserInfo,
+  createSection,
+  updateSection,
+  deleteSection,
+  getPosts,
+  getPostById,
   createPost,
-  getPostDetail,
-  getPostComments,
+  updatePost,
+  deletePost,
   likePost,
-  favoritePost,
+  unlikePost,
+  getComments,
+  getCommentReplies,
   createComment,
+  deleteComment,
   likeComment,
-  replyComment
+  unlikeComment,
+  reportPost,
+  getReportsByPostId,
+  setPostTopStatus,
+  setPostEssenceStatus,
+  setPostLockStatus,
+  setPostHiddenStatus,
+  handlePostReport
 };
 
-export default communityApi; 
+export default communityApi;

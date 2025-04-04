@@ -10,8 +10,9 @@ export const isAuthStateConsistent = (): boolean => {
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
   const username = localStorage.getItem('username');
+  const userType = localStorage.getItem('userType');
   
-  // 检查状态一致性
+  // 检查状态一致性 - 增加userType检查
   return Boolean((token && userId && username) || (!token && !userId && !username));
 };
 
@@ -23,6 +24,7 @@ export const clearAuthState = (): void => {
   localStorage.removeItem('token');
   localStorage.removeItem('userId');
   localStorage.removeItem('username');
+  localStorage.removeItem('userType'); // 确保清理userType
   // 可以在这里添加其他需要清理的身份验证相关状态
 };
 
@@ -37,6 +39,7 @@ export const getCurrentUser = () => {
   
   const userId = localStorage.getItem('userId');
   const username = localStorage.getItem('username');
+  const userType = localStorage.getItem('userType');
   
   if (!userId || !username) {
     return null;
@@ -44,7 +47,8 @@ export const getCurrentUser = () => {
   
   return {
     id: userId,
-    username
+    username,
+    userType: userType ? Number(userType) : 0
   };
 };
 

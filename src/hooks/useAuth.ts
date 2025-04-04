@@ -36,8 +36,9 @@ export const useAuth = () => {
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
         const username = localStorage.getItem('username');
+        const userType = localStorage.getItem('userType');
         
-        console.log('本地存储状态:', { token, userId, username });
+        console.log('本地存储状态:', { token, userId, username, userType: userType ? Number(userType) : undefined });
         
         return Boolean(token && userId && username);
       } catch (error) {

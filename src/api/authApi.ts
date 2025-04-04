@@ -17,6 +17,7 @@ export interface LoginResponse {
     token: string;
     expiresIn: number;
     refreshToken: string;
+    userType?: number;   // 添加可选的用户类型字段
   };
 }
 
@@ -49,6 +50,11 @@ export interface RegisterResponse {
   };
 }
 
+// 刷新Token接口参数
+export interface RefreshTokenParams {
+  refreshToken?: string;
+}
+
 // API基础URL
 const BASE_URL = process.env.REACT_APP_API_URL || '';
 console.log('API基础URL:', BASE_URL);
@@ -69,9 +75,28 @@ export const login = async (params: LoginParams): Promise<any> => {
       
       const { token, userId, username } = response.data.data;
       
+      // 保存userType (如果存在)
+      // 尝试从响应数据中获取 userType
+      let userType = 0; // 默认为学生(0)
+      // 使用类型断言来处理可能不在接口中定义的属性
+      const responseData = response.data.data as any;
+      
+      if (responseData.userType !== undefined) {
+        userType = Number(responseData.userType);
+        console.log('从响应中获取到userType:', userType);
+      } else if (responseData.user_type !== undefined) {
+        userType = Number(responseData.user_type);
+        console.log('从响应中获取到user_type:', userType);
+      }
+      
+      // 保存登录信息到localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('userId', userId.toString());
       localStorage.setItem('username', username);
+      localStorage.setItem('userType', userType.toString());
+      
+      console.log('已保存用户类型到localStorage:', userType);
+      console.log('用户类型:', userType === 0 ? '学生' : userType === 1 ? '教师' : userType === 2 ? '管理员' : '未知');
       
       // 返回成功响应，使用一致的数据结构
       return {
@@ -79,7 +104,8 @@ export const login = async (params: LoginParams): Promise<any> => {
         message: response.data.msg,
         user: {
           id: userId.toString(),
-          username: username
+          username: username,
+          userType: userType
         },
         token: token,
         data: response.data.data
@@ -182,6 +208,7 @@ export const logout = async (): Promise<any> => {
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       localStorage.removeItem('username');
+      localStorage.removeItem('userType'); // 确保清理userType
       
       return {
         success: true,
@@ -200,6 +227,7 @@ export const logout = async (): Promise<any> => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
+    localStorage.removeItem('userType'); // 确保清理userType
     
     return {
       success: false,
@@ -222,40 +250,89 @@ export const checkLoginStatus = async (): Promise<any> => {
       };
     }
     
-    // 调用后端接口验证登录状态
-    const response = await http.get('/auth/check');
-    console.log('检查登录状态响应:', response.data);
-    
-    if (response.data.code === 200) {
-      // 根据后端返回的布尔值确定登录状态
-      const isLoggedIn = response.data.data === true;
+    try {
+      console.log('开始验证token有效性...');
+      // 调用后端接口验证登录状态
+      const response = await http.get('/auth/check');
+      console.log('检查登录状态响应:', response.data);
       
-      if (!isLoggedIn) {
-        // 如果后端返回未登录，清除本地存储
-        localStorage.removeItem('token');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('username');
+      if (response.data.code === 200) {
+        // 根据后端返回的布尔值确定登录状态
+        const isLoggedIn = response.data.data === true;
+        
+        if (!isLoggedIn) {
+          // 如果后端返回未登录，清除本地存储
+          console.log('后端返回未登录状态，清除本地存储');
+          clearLocalStorage();
+          return {
+            success: true,
+            isLoggedIn: false,
+            message: '登录已失效，请重新登录'
+          };
+        }
+        
+        return {
+          success: true,
+          isLoggedIn: true,
+          message: '已登录'
+        };
+      } else {
+        console.error('检查登录状态失败:', response.data.msg);
+        clearLocalStorage();
+        return {
+          success: false,
+          isLoggedIn: false,
+          message: response.data.msg || '检查登录状态失败'
+        };
+      }
+    } catch (error: any) {
+      console.error('检查登录状态请求错误:', error);
+      
+      // 检查是否是token无效错误
+      if (error.response) {
+        console.error('错误状态码:', error.response.status);
+        console.error('错误详情:', error.response.data);
+        
+        // 对于401错误，尝试刷新token
+        if (error.response.status === 401 || 
+            (error.response.data && error.response.data.msg && error.response.data.msg.includes('token'))) {
+          console.log('检测到token可能已过期或无效，尝试刷新token');
+          const refreshResult = await refreshToken();
+          
+          if (refreshResult.success) {
+            // token刷新成功，重试检查登录状态
+            return {
+              success: true,
+              isLoggedIn: true,
+              message: '登录状态已刷新'
+            };
+          } else {
+            // 刷新token失败，清除本地存储
+            console.error('刷新token失败, 清除登录状态');
+            clearLocalStorage();
+            return {
+              success: false,
+              isLoggedIn: false,
+              message: '登录已过期，请重新登录'
+            };
+          }
+        }
       }
       
-      return {
-        success: true,
-        isLoggedIn,
-        message: isLoggedIn ? '已登录' : '未登录'
-      };
-    } else {
-      console.error('检查登录状态失败:', response.data.msg);
+      // 其他类型的错误，清除登录状态
+      console.error('未知错误，清除登录状态');
+      clearLocalStorage();
+      
       return {
         success: false,
         isLoggedIn: false,
-        message: response.data.msg || '检查登录状态失败'
+        message: error.response?.data?.msg || '检查登录状态失败'
       };
     }
   } catch (error: any) {
     console.error('检查登录状态错误:', error);
     // 发生错误时认为未登录
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('username');
+    clearLocalStorage();
     
     return {
       success: false,
@@ -263,4 +340,95 @@ export const checkLoginStatus = async (): Promise<any> => {
       message: error.response?.data?.msg || '检查登录状态失败'
     };
   }
+};
+
+// 刷新Token
+export const refreshToken = async (params?: RefreshTokenParams): Promise<any> => {
+  try {
+    // 获取当前token (可能已过期)
+    const currentToken = localStorage.getItem('token') || '';
+    const userId = localStorage.getItem('userId') || '';
+    const username = localStorage.getItem('username') || '';
+    
+    console.log('尝试刷新token');
+    
+    if (!currentToken) {
+      console.error('无token可刷新，直接清除登录状态');
+      clearLocalStorage();
+      return {
+        success: false,
+        message: '无token可刷新'
+      };
+    }
+    
+    try {
+      // 调用刷新token的API
+      const response = await http.post('/auth/refresh', {
+        refreshToken: params?.refreshToken || currentToken
+      });
+      
+      console.log('刷新token响应:', response.data);
+      
+      if (response.data.code === 200) {
+        // 刷新成功，更新localStorage
+        const { token, refreshToken } = response.data.data;
+        
+        localStorage.setItem('token', token);
+        if (refreshToken) {
+          localStorage.setItem('refreshToken', refreshToken);
+        }
+        
+        console.log('token刷新成功');
+        
+        return {
+          success: true,
+          message: '刷新token成功'
+        };
+      } else {
+        console.error('刷新token失败:', response.data.msg);
+        clearLocalStorage();
+        return {
+          success: false,
+          message: response.data.msg || '刷新token失败'
+        };
+      }
+    } catch (error: any) {
+      // 如果刷新token请求本身失败，可能是网络问题或后端异常
+      console.error('刷新token请求失败:', error);
+      
+      // 检查是否是401错误（token无效）
+      if (error.response && error.response.status === 401) {
+        console.error('token已失效，清除登录状态');
+        clearLocalStorage();
+        return {
+          success: false,
+          message: 'token已失效，需要重新登录'
+        };
+      }
+      
+      // 其他错误可能是临时的，不一定要清除登录状态
+      // 但由于我们无法确认token的有效性，保守起见还是清除
+      clearLocalStorage();
+      return {
+        success: false,
+        message: error.response?.data?.msg || '刷新token请求失败'
+      };
+    }
+  } catch (error: any) {
+    console.error('刷新token错误:', error);
+    clearLocalStorage();
+    return {
+      success: false,
+      message: error.response?.data?.msg || '刷新token失败'
+    };
+  }
+};
+
+// 清除本地存储
+const clearLocalStorage = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('username');
+  localStorage.removeItem('userType');
 }; 

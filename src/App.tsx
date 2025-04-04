@@ -19,6 +19,18 @@ const AuthMonitor: React.FC = () => {
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
   
+  // 组件挂载时检查登录状态
+  useEffect(() => {
+    const localToken = localStorage.getItem('token');
+    if (localToken) {
+      console.log('检测到本地token，正在验证其有效性...');
+      // 导入并执行checkAuth操作以验证token
+      import('./store/actions/authActions').then(({ checkAuth }) => {
+        dispatch(checkAuth());
+      });
+    }
+  }, [dispatch]);
+  
   useEffect(() => {
     console.log('认证状态:', { isAuthenticated, user });
     

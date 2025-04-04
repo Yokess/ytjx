@@ -2,8 +2,8 @@
 
 // 作者信息
 export interface Author {
-  id: string;
-  name: string;
+  userId: number;
+  username: string;
   avatar: string;
   title?: string;
   level?: number;
@@ -22,34 +22,20 @@ export interface Column {
   views: number;
 }
 
-// 帖子信息
-export interface Post {
-  id: number;
-  title: string;
-  content?: string;
-  tags: string[];
-  tagColors?: string[];
-  author: Author;
-  date: string;
-  views: number;
-  comments: number;
-  likes: number;
-  postTags?: string[];
-  isOfficial?: boolean;
-}
-
 // 社区板块信息
 export interface Section {
-  name: string;
-  icon: string;
-  count: number;
-  color: string;
+  sectionId: number;
+  sectionName: string;
+  sectionDescription: string;
+  postCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 用户信息
 export interface UserInfo {
-  id: string;
-  name: string;
+  userId: number;
+  username: string;
   avatar: string;
   points: number;
   major: string;
@@ -58,94 +44,124 @@ export interface UserInfo {
   favorites: number;
 }
 
+// 帖子列表项
+export interface Post {
+  postId: number;
+  sectionId: number;
+  sectionName: string;
+  userId: number;
+  username: string;
+  userAvatar: string;
+  postTitle: string;
+  postContent?: string;
+  postSummary?: string;
+  postStatus: number; // 0-正常，1-禁用，2-已删除
+  postViews: number;
+  postLikes: number;
+  postComments: number;
+  knowledgePoints?: KnowledgePoint[];
+  isTop: boolean;
+  isEssence: boolean;
+  hasLiked?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 知识点
+export interface KnowledgePoint {
+  knowledgePointId: number;
+  knowledgePointName: string;
+}
+
 // 帖子详情
 export interface PostDetail {
-  id: string;
-  title: string;
-  content: string;
-  author: {
-    id: string;
-    name: string;
-    avatar: string;
-    level: number;
-    title: string;
-    postCount: number;
-    followersCount: number;
-  };
-  createTime: string;
-  updateTime: string;
-  viewCount: number;
-  likeCount: number;
-  favoriteCount: number;
-  commentCount: number;
-  tags: string[];
-  section: string;
-  isLiked: boolean;
-  isFavorited: boolean;
+  postId: number;
+  sectionId: number;
+  sectionName: string;
+  userId: number;
+  username: string;
+  userAvatar: string;
+  postTitle: string;
+  postContent: string;
+  postStatus: number;
+  postViews: number;
+  postLikes: number;
+  postComments: number;
+  knowledgePoints: KnowledgePoint[];
+  isTop: boolean;
+  isEssence: boolean;
+  hasLiked: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 评论回复
 export interface CommentReply {
-  id: string;
-  author: {
-    id: string;
-    name: string;
-    avatar: string;
-    level: number;
-  };
-  content: string;
-  createTime: string;
+  commentId: number;
+  postId: number;
+  userId: number;
+  username: string;
+  userAvatar: string;
+  parentCommentId: number;
+  commentContent: string;
   likeCount: number;
-  isLiked: boolean;
-  replyTo?: {
-    id: string;
-    name: string;
-  };
+  hasLiked: boolean;
+  createdAt: string;
 }
 
 // 评论信息
 export interface Comment {
-  id: string;
-  author: {
-    id: string;
-    name: string;
-    avatar: string;
-    level: number;
-  };
-  content: string;
-  createTime: string;
+  commentId: number;
+  postId: number;
+  userId: number;
+  username: string;
+  userAvatar: string;
+  commentContent: string;
   likeCount: number;
-  isLiked: boolean;
+  hasLiked: boolean;
+  createdAt: string;
   replies: CommentReply[];
+}
+
+// 帖子举报
+export interface PostReport {
+  reportId: number;
+  postId: number;
+  userId: number;
+  reportReason: string;
+  reportStatus: number; // 0-待处理，1-已处理，2-已驳回
+  createdAt: string;
+  resolvedAt?: string;
 }
 
 // 帖子查询参数
 export interface PostsQueryParams {
-  page?: number;
+  pageNum?: number;
   pageSize?: number;
   sortBy?: 'latest' | 'hot' | 'featured';
-  section?: string;
-  tag?: string;
+  sectionId?: number;
   keyword?: string;
 }
 
 // 创建帖子参数
-export interface CreatePostParams {
-  title: string;
-  content: string;
-  section: string;
-  tags: string[];
+export interface CreatePostDTO {
+  sectionId: number;
+  postTitle: string;
+  postContent: string;
+  knowledgePointIds?: number[];
 }
 
 // 创建评论参数
-export interface CreateCommentParams {
-  content: string;
+export interface CreateCommentDTO {
+  postId: number;
+  commentContent: string;
+  parentCommentId?: number;
 }
 
-// 创建回复参数
-export interface CreateReplyParams {
-  content: string;
-  replyToUserId?: string;
+// 举报帖子参数
+export interface CreateReportDTO {
+  postId: number;
+  reportReason: string;
 }
 
 // API 响应类型
@@ -153,4 +169,15 @@ export interface ApiResponse<T> {
   code: number;
   message: string;
   data: T;
+}
+
+// 分页结果
+export interface PageResult<T> {
+  total: number;
+  pageNum: number;
+  pageSize: number;
+  pages: number;
+  list: T[];
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 } 

@@ -13,7 +13,8 @@ import {
   Radio,
   Row,
   Col,
-  Space
+  Space,
+  Modal
 } from 'antd';
 import { 
   CheckCircleOutlined, 
@@ -27,7 +28,7 @@ import {
   RedoOutlined
 } from '@ant-design/icons';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { getExamResult, getExamDetail } from '../../../api/examApi';
+import { getExamResult, getExamDetail, getExamLeaderboard } from '../../../api/examApi';
 import { QuestionType, ExamResult, ExamResultQuestionDetail } from '../../../types/exam';
 import MainLayout from '../../../components/layout/MainLayout';
 import styles from './ExamResult.module.scss';
@@ -101,12 +102,12 @@ const SidebarContent = () => {
         <h3>相关考试</h3>
         <div className={styles.examsList}>
           <Link to="/exams/mock" className={styles.examLink}>
-            <span>2025考研英语模拟测试</span>
-            <Tag color="blue">即将开始</Tag>
+            <span>继续做题</span>
+            <Tag color="blue">推荐</Tag>
           </Link>
           <Link to="/exams/mock" className={styles.examLink}>
-            <span>数据结构专项练习</span>
-            <Tag color="green">进行中</Tag>
+            <span>查看全部考试</span>
+            <Tag color="green">更多</Tag>
           </Link>
         </div>
       </div>
@@ -123,6 +124,7 @@ const ExamResultPage: React.FC = () => {
   const [examResult, setExamResult] = useState<ExamResult | null>(null);
   const [examDetail, setExamDetail] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   
   // 本地状态
   const [activeTab, setActiveTab] = useState('all');
@@ -144,6 +146,20 @@ const ExamResultPage: React.FC = () => {
           const detailResponse = await getExamDetail(Number(examId));
           if (detailResponse.code === 200 && detailResponse.data) {
             setExamDetail(detailResponse.data);
+          }
+          
+          // 获取排行榜数据
+          try {
+            const leaderboardResponse = await getExamLeaderboard(Number(examId), { size: 10 });
+            if (leaderboardResponse.code === 200 && leaderboardResponse.data && Array.isArray(leaderboardResponse.data.records)) {
+              setLeaderboard(leaderboardResponse.data.records || []);
+            } else {
+              console.log('排行榜数据格式不正确或为空:', leaderboardResponse);
+              setLeaderboard([]);
+            }
+          } catch (err) {
+            console.error('获取排行榜失败:', err);
+            setLeaderboard([]);
           }
           
           setError(null);
@@ -181,6 +197,7 @@ const ExamResultPage: React.FC = () => {
   
   // 过滤题目（全部/正确/错误）
   const filterQuestions = (questions: ExamResultQuestionDetail[], type: 'all' | 'correct' | 'wrong') => {
+    if (!questions || questions.length === 0) return [];
     if (type === 'all') return questions;
     if (type === 'correct') return questions.filter(q => q.isCorrect);
     return questions.filter(q => !q.isCorrect);
@@ -190,9 +207,17 @@ const ExamResultPage: React.FC = () => {
   const calculateStats = () => {
     if (!examResult) return { correctRate: 0, wrongRate: 0, avgScore: 0 };
     
-    const correctRate = examResult.accuracy * 100;
-    const wrongRate = 100 - correctRate;
-    const avgScore = examResult.score / examResult.totalCount;
+    // 确保totalCount不为0，避免除以0的情况
+    const totalCount = examResult.totalCount || examResult.questionResults?.length || 0;
+    if (totalCount === 0) return { correctRate: 0, wrongRate: 0, avgScore: 0 };
+    
+    // 正确题目数量，如果没有则根据questionResults计算
+    const correctCount = examResult.correctCount || 
+      (examResult.questionResults ? examResult.questionResults.filter(q => q.isCorrect).length : 0);
+    
+    const correctRate = totalCount > 0 ? (correctCount / totalCount) * 100 : 0;
+    const wrongRate = totalCount > 0 ? 100 - correctRate : 0;
+    const avgScore = totalCount > 0 ? (examResult.score || 0) / totalCount : 0;
     
     return { correctRate, wrongRate, avgScore };
   };
@@ -201,25 +226,84 @@ const ExamResultPage: React.FC = () => {
   const formatExamDuration = () => {
     if (!examResult) return '0分钟';
     
-    const startTime = new Date(examResult.startTime);
-    const submitTime = new Date(examResult.submitTime);
-    const durationMs = submitTime.getTime() - startTime.getTime();
-    
-    const minutes = Math.floor(durationMs / (1000 * 60));
-    const seconds = Math.floor((durationMs % (1000 * 60)) / 1000);
-    
-    return `${minutes}分${seconds}秒`;
+    try {
+      // 尝试从leaderboard获取duration
+      if (leaderboard && leaderboard.length > 0) {
+        const userRecord = leaderboard.find(item => item.userId === examResult.userId);
+        if (userRecord && userRecord.duration) {
+          const minutes = Math.floor(userRecord.duration / 60);
+          const seconds = userRecord.duration % 60;
+          return `${minutes}分${seconds}秒`;
+        }
+      }
+      
+      // 如果没有startTime或endTime，返回默认值
+      if (!examResult.startTime || !examResult.endTime) {
+        return examResult.duration ? `${examResult.duration}分钟` : '未知';
+      }
+      
+      // 计算时间差
+      const startTime = new Date(examResult.startTime);
+      const endTime = new Date(examResult.endTime);
+      const durationMs = endTime.getTime() - startTime.getTime();
+      
+      if (isNaN(durationMs) || durationMs < 0) {
+        return examResult.duration ? `${examResult.duration}分钟` : '未知';
+      }
+      
+      const minutes = Math.floor(durationMs / (1000 * 60));
+      const seconds = Math.floor((durationMs % (1000 * 60)) / 1000);
+      
+      return `${minutes}分${seconds}秒`;
+    } catch (err) {
+      console.error('格式化考试时间出错:', err);
+      return '未知';
+    }
   };
   
   // 生成百分比评价
   const getPercentileRating = () => {
-    if (!examResult || !examResult.percentile) return { text: '未知', color: '' };
+    if (!examResult) return { text: '未知', color: '' };
     
-    const percentile = examResult.percentile;
-    if (percentile >= 90) return { text: '优秀', color: 'success' };
-    if (percentile >= 75) return { text: '良好', color: 'processing' };
-    if (percentile >= 60) return { text: '一般', color: 'warning' };
+    // 根据得分比例评价
+    const scoreRatio = examResult.score / examResult.totalScore;
+    
+    if (scoreRatio >= 0.9) return { text: '优秀', color: 'success' };
+    if (scoreRatio >= 0.75) return { text: '良好', color: 'processing' };
+    if (scoreRatio >= 0.6) return { text: '一般', color: 'warning' };
     return { text: '需努力', color: 'error' };
+  };
+  
+  // 操作按钮
+  const handleShowLeaderboard = () => {
+    if (leaderboard && leaderboard.length > 0) {
+      // 显示排行榜数据
+      Modal.info({
+        title: '考试排行榜',
+        width: 600,
+        content: (
+          <div>
+            {leaderboard.map((item, index) => (
+              <div key={index} className={styles.rankItem} style={{ padding: '8px 0', display: 'flex', justifyContent: 'space-between', borderBottom: index < leaderboard.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+                <div>
+                  <Tag color={index < 3 ? ['gold', 'silver', 'bronze'][index] : 'default'}>
+                    {index + 1}
+                  </Tag>
+                  <span style={{ marginLeft: 8 }}>{item.username}</span>
+                </div>
+                <div>
+                  <span style={{ marginRight: 16 }}>{item.score}分</span>
+                  <span>{item.accuracy ? `${(item.accuracy * 100).toFixed(0)}%` : '-'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ),
+        okText: '关闭'
+      });
+    } else {
+      message.info('暂无排行榜数据');
+    }
   };
   
   if (loading) {
@@ -259,7 +343,7 @@ const ExamResultPage: React.FC = () => {
   const percentileRating = getPercentileRating();
   
   // 获取错题数量
-  const wrongQuestionsCount = examResult.details.filter(q => !q.isCorrect).length;
+  const wrongQuestionsCount = examResult.questionResults ? examResult.questionResults.filter(q => !q.isCorrect).length : 0;
   
   return (
     <MainLayout sidebarContent={<SidebarContent />}>
@@ -303,8 +387,11 @@ const ExamResultPage: React.FC = () => {
                   <div className={styles.statInfo}>
                     <Text type="secondary">正确题数</Text>
                     <div className={styles.statValue}>
-                      {examResult.correctCount}/{examResult.totalCount}
-                      <span className={styles.statPercent}>({Math.round(correctRate)}%)</span>
+                      {examResult.correctCount || (examResult.questionResults ? examResult.questionResults.filter(q => q.isCorrect).length : 0)}
+                      /{examResult.totalCount || examResult.questionResults?.length || 0}
+                      <span className={styles.statPercent}>
+                        ({Math.round(correctRate) || 0}%)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -316,8 +403,10 @@ const ExamResultPage: React.FC = () => {
                   <div className={styles.statInfo}>
                     <Text type="secondary">错误题数</Text>
                     <div className={styles.statValue}>
-                      {wrongQuestionsCount}/{examResult.totalCount}
-                      <span className={styles.statPercent}>({Math.round(wrongRate)}%)</span>
+                      {wrongQuestionsCount || 0}/{examResult.totalCount || examResult.questionResults?.length || 0}
+                      <span className={styles.statPercent}>
+                        ({Math.round(wrongRate) || 0}%)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -329,7 +418,9 @@ const ExamResultPage: React.FC = () => {
                   <div className={styles.statInfo}>
                     <Text type="secondary">排名</Text>
                     <div className={styles.statValue}>
-                      {examResult.rank || '-'}
+                      {leaderboard && leaderboard.length > 0 ? 
+                        (leaderboard.findIndex(item => item.userId === examResult.userId) + 1) || '-'
+                        : '-'}
                       {examResult.percentile && (
                         <span className={styles.statPercent}>
                           (超过{Math.round(examResult.percentile)}%)
@@ -374,30 +465,34 @@ const ExamResultPage: React.FC = () => {
         <Card className={styles.questionDetailsCard}>
           <Title level={5}>答题详情</Title>
           
-          <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            className={styles.questionTabs}
-          >
-            <TabPane 
-              tab={`全部题目(${examResult.details.length})`} 
-              key="all"
+          {examResult.questionResults && examResult.questionResults.length > 0 ? (
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              className={styles.questionTabs}
             >
-              {renderQuestionList(examResult.details)}
-            </TabPane>
-            <TabPane 
-              tab={`正确题目(${examResult.correctCount})`} 
-              key="correct"
-            >
-              {renderQuestionList(filterQuestions(examResult.details, 'correct'))}
-            </TabPane>
-            <TabPane 
-              tab={`错误题目(${wrongQuestionsCount})`} 
-              key="wrong"
-            >
-              {renderQuestionList(filterQuestions(examResult.details, 'wrong'))}
-            </TabPane>
-          </Tabs>
+              <TabPane 
+                tab={`全部题目(${examResult.questionResults.length})`} 
+                key="all"
+              >
+                {renderQuestionList(examResult.questionResults)}
+              </TabPane>
+              <TabPane 
+                tab={`正确题目(${examResult.questionResults.filter(q => q.isCorrect).length})`} 
+                key="correct"
+              >
+                {renderQuestionList(examResult.questionResults.filter(q => q.isCorrect))}
+              </TabPane>
+              <TabPane 
+                tab={`错误题目(${examResult.questionResults.filter(q => !q.isCorrect).length})`} 
+                key="wrong"
+              >
+                {renderQuestionList(examResult.questionResults.filter(q => !q.isCorrect))}
+              </TabPane>
+            </Tabs>
+          ) : (
+            <Empty description="暂无题目详情" />
+          )}
         </Card>
         
         {/* 操作按钮 */}
@@ -405,7 +500,7 @@ const ExamResultPage: React.FC = () => {
           <Button 
             icon={<BarChartOutlined />} 
             className={styles.actionButton}
-            onClick={() => message.info('排行榜功能正在开发中')}
+            onClick={handleShowLeaderboard}
           >
             查看排行榜
           </Button>
@@ -434,7 +529,7 @@ const ExamResultPage: React.FC = () => {
   
   // 渲染题目列表
   function renderQuestionList(questions: ExamResultQuestionDetail[]) {
-    if (questions.length === 0) {
+    if (!questions || questions.length === 0) {
       return <Empty description="暂无题目" />;
     }
     
@@ -453,12 +548,13 @@ const ExamResultPage: React.FC = () => {
                 </Tag>
               </div>
               <div className={styles.questionScore}>
-                得分：<span>{question.score}</span>
+                得分：<span>{question.isCorrect ? question.score : 0}/{question.score}</span>
               </div>
             </div>
             
             <div className={styles.questionContent}>
-              <Paragraph>{`问题: ${question.questionId}`}</Paragraph>
+              {/* 实际项目中应显示真实的题目内容，这里因接口限制简化处理 */}
+              <Paragraph>题目ID: {question.questionId}</Paragraph>
               
               <div className={styles.answerComparison}>
                 <div className={styles.userAnswer}>

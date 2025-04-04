@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Breadcrumb, Avatar, Dropdown, Button, Space, Badge, message } from 'antd';
 import {
   MenuUnfoldOutlined,
@@ -23,11 +23,13 @@ import {
   ClusterOutlined,
   SecurityScanOutlined,
   FileOutlined,
-  SaveOutlined
+  SaveOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
+import { RootState } from '../../store/store';
 
 const { Header, Sider, Content } = Layout;
 
@@ -36,6 +38,25 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
+  
+  // 检查用户类型，确保只有管理员能访问
+  useEffect(() => {
+    // 从localStorage获取userType保证最新值
+    const userType = localStorage.getItem('userType');
+    console.log('AdminLayout - 用户类型检查:', { 
+      reduxUserType: user?.userType, 
+      localStorageUserType: userType,
+      userId: user?.id,
+      username: user?.username
+    });
+    
+    if (userType !== '2') {
+      console.log('非管理员用户，重定向到首页');
+      message.error('您没有管理员权限');
+      navigate('/');
+    }
+  }, [navigate, user]);
 
   // 面包屑映射
   const breadcrumbNameMap: Record<string, string> = {
@@ -60,14 +81,14 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       const url = `/${pathSnippets.slice(0, index + 1).join('/')}`;
       return (
         <Breadcrumb.Item key={url}>
-          {breadcrumbNameMap[url] || url.split('/').pop()}
+          <Link to={url}>{breadcrumbNameMap[url] || url.split('/').pop()}</Link>
         </Breadcrumb.Item>
       );
     });
     
     return [
-      <Breadcrumb.Item key="home" onClick={() => navigate('/admin')}>
-        控制台
+      <Breadcrumb.Item key="home">
+        <Link to="/admin">控制台</Link>
       </Breadcrumb.Item>,
       ...extraBreadcrumbItems,
     ];
@@ -111,10 +132,6 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {
           key: '/admin/users/list',
           label: '用户列表',
-        },
-        {
-          key: '/admin/users/roles',
-          label: '角色管理',
         },
       ],
     },
@@ -197,24 +214,46 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
         <Menu
           theme="dark"
-          selectedKeys={[location.pathname]}
+          defaultSelectedKeys={[location.pathname]}
           defaultOpenKeys={['user', 'course', 'exam', 'community']}
           mode="inline"
-          onClick={({ key }) => navigate(key)}
         >
-          {menuItems.map(item => 
-            item.children ? (
-              <Menu.SubMenu key={item.key} icon={item.icon} title={item.label}>
-                {item.children.map(child => (
-                  <Menu.Item key={child.key}>{child.label}</Menu.Item>
-                ))}
-              </Menu.SubMenu>
-            ) : (
-              <Menu.Item key={item.key} icon={item.icon}>
-                {item.label}
-              </Menu.Item>
-            )
-          )}
+          <Menu.Item key="/admin" icon={<DashboardOutlined />}>
+            <Link to="/admin">控制台</Link>
+          </Menu.Item>
+
+          <Menu.SubMenu key="user" icon={<UserOutlined />} title="用户管理">
+            <Menu.Item key="/admin/users/list">
+              <Link to="/admin/users/list">用户列表</Link>
+            </Menu.Item>
+          </Menu.SubMenu>
+
+          <Menu.SubMenu key="course" icon={<BookOutlined />} title="课程管理">
+            <Menu.Item key="/admin/courses">
+              <Link to="/admin/courses">课程列表</Link>
+            </Menu.Item>
+          </Menu.SubMenu>
+
+          <Menu.SubMenu key="exam" icon={<FormOutlined />} title="考试管理">
+            <Menu.Item key="/admin/exams/list">
+              <Link to="/admin/exams/list">考试列表</Link>
+            </Menu.Item>
+            <Menu.Item key="/admin/questions">
+              <Link to="/admin/questions">题库管理</Link>
+            </Menu.Item>
+          </Menu.SubMenu>
+
+          <Menu.SubMenu key="community" icon={<CommentOutlined />} title="社区管理">
+            <Menu.Item key="/admin/community/sections">
+              <Link to="/admin/community/sections">板块管理</Link>
+            </Menu.Item>
+            <Menu.Item key="/admin/community/posts">
+              <Link to="/admin/community/posts">帖子管理</Link>
+            </Menu.Item>
+            <Menu.Item key="/admin/community/comments">
+              <Link to="/admin/community/comments">评论管理</Link>
+            </Menu.Item>
+          </Menu.SubMenu>
         </Menu>
       </Sider>
       <Layout>

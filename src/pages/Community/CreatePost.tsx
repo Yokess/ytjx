@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import { getSections, createPost } from '../../api/communityApi';
 import styles from './PostDetail.module.scss';
+import { CreatePostDTO } from '../../types/community';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -15,7 +16,7 @@ const CreatePostPage: React.FC = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [sections, setSections] = useState<{ name: string; color: string }[]>([]);
+  const [sections, setSections] = useState<{ sectionId: number; sectionName: string; sectionDescription: string }[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [inputVisible, setInputVisible] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -27,8 +28,9 @@ const CreatePostPage: React.FC = () => {
       try {
         const res = await getSections();
         setSections(res.data.map(section => ({
-          name: section.name,
-          color: section.color
+          sectionId: section.sectionId,
+          sectionName: section.sectionName,
+          sectionDescription: section.sectionDescription
         })));
       } catch (error) {
         console.error('获取板块数据失败', error);
@@ -41,20 +43,15 @@ const CreatePostPage: React.FC = () => {
   
   // 处理表单提交
   const handleSubmit = async (values: any) => {
-    if (tags.length === 0) {
-      message.error('请至少添加一个标签');
-      return;
-    }
-    
     setSubmitting(true);
     
     try {
       // 准备提交数据
-      const postData = {
-        title: values.title,
-        content: values.content,
-        section: values.section,
-        tags
+      const postData: CreatePostDTO = {
+        postTitle: values.title,
+        postContent: values.content,
+        sectionId: values.section,
+        knowledgePointIds: [] // 由于目前API要求传递知识点ID，但UI上只有标签名，这里暂时传空数组
       };
       
       // 提交创建请求
@@ -62,7 +59,7 @@ const CreatePostPage: React.FC = () => {
       
       message.success('发布成功！');
       // 跳转到帖子详情页
-      navigate(`/community/post/${res.data.id}`);
+      navigate(`/community/post/${res.data.postId}`);
     } catch (error) {
       console.error('发布失败', error);
       message.error('发布失败，请稍后重试');
@@ -129,7 +126,7 @@ const CreatePostPage: React.FC = () => {
             layout="vertical"
             onFinish={handleSubmit}
             className={styles.createPostForm}
-            initialValues={{ section: sections[0]?.name }}
+            initialValues={{ section: sections[0]?.sectionId }}
           >
             {/* 标题 */}
             <Form.Item
@@ -150,16 +147,16 @@ const CreatePostPage: React.FC = () => {
               rules={[{ required: true, message: '请选择所属板块' }]}
             >
               <Select placeholder="请选择所属板块">
-                {sections.map((section, index) => (
-                  <Option key={index} value={section.name}>
-                    <Tag color={section.color}>{section.name}</Tag>
+                {sections.map((section) => (
+                  <Option key={section.sectionId} value={section.sectionId}>
+                    <Tag color="blue">{section.sectionName}</Tag>
                   </Option>
                 ))}
               </Select>
             </Form.Item>
             
             {/* 标签 */}
-            <Form.Item label="标签">
+            <Form.Item label="标签（选填）">
               <div className={styles.tagsContainer}>
                 {tags.map(tag => (
                   <Tag
@@ -194,7 +191,7 @@ const CreatePostPage: React.FC = () => {
                 )}
               </div>
               <div className={styles.tagsHint}>
-                添加2-5个标签，每个标签不超过10个字符，用于更好地分类和被搜索到
+                可以添加2-5个标签，每个标签不超过10个字符，用于更好地分类和被搜索到（可选）
               </div>
             </Form.Item>
             
@@ -239,7 +236,6 @@ const CreatePostPage: React.FC = () => {
                 type="primary" 
                 htmlType="submit" 
                 loading={submitting}
-                disabled={tags.length === 0}
               >
                 发布帖子
               </Button>

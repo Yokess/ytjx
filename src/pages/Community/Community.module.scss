@@ -180,6 +180,90 @@
   }
 }
 
+.featuredPostCard {
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .postHeader {
+    padding: 16px 16px 8px;
+    flex: 1;
+  }
+  
+  .postMeta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .userInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .postTime {
+    font-size: 12px;
+    color: #999;
+  }
+  
+  .postTitle {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    
+    a {
+      color: #333;
+      text-decoration: none;
+      
+      &:hover {
+        color: #4f46e5;
+      }
+    }
+  }
+  
+  .postContent {
+    color: #666;
+    font-size: 14px;
+  }
+  
+  .postFooter {
+    padding: 8px 16px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #f0f0f0;
+    margin-top: auto;
+  }
+  
+  .postTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .postMeta {
+    display: flex;
+    gap: 16px;
+    color: #999;
+    font-size: 12px;
+    
+    span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
 .columnCover {
   height: 120px;
   position: relative;

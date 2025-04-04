@@ -33,6 +33,14 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../components/layout/AdminLayout';
 import type { ColumnsType } from 'antd/es/table';
+import { 
+  getExamDetail, 
+  getExamQuestions, 
+  updateExamQuestions, 
+  getExamStatistics 
+} from '../../../api/adminApi';
+import { QuestionType as QuestionTypeEnum, ExamStatus } from '../../../types/exam';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -40,22 +48,20 @@ const { Text } = Typography;
 
 // 考试类型定义
 interface ExamType {
-  id: number;
-  title: string;
+  examId: number;
+  name: string;
   description: string;
-  category: string;
   startTime: string;
   endTime: string;
   duration: number; // 分钟
   totalScore: number;
-  passingScore: number;
-  questionsCount: number;
-  participants: number;
-  status: 'draft' | 'published' | 'ongoing' | 'ended';
-  createdAt: string;
-  updatedAt: string;
-  isPublic: boolean;
-  creator: string;
+  status: ExamStatus;
+  questionCount?: number;
+  participantCount?: number;
+  createTime?: string;
+  updateTime?: string;
+  creatorName?: string;
+  passScore?: number;
 }
 
 // 考试题目类型
@@ -65,7 +71,7 @@ interface ExamQuestionType {
   questionId: number;
   score: number;
   sort: number;
-  type: 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay';
+  type: QuestionTypeEnum;
   content: string;
   answer: string;
   options?: { id: string; content: string }[];
@@ -75,139 +81,85 @@ interface ExamQuestionType {
 
 // 候选题目类型
 interface QuestionType {
-  id: number;
-  content: string;
-  type: 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay';
-  difficulty: 'easy' | 'medium' | 'hard';
-  options?: { id: string; content: string; isCorrect: boolean }[];
+  questionId: number;
+  questionText: string;
+  questionType: QuestionTypeEnum;
+  options?: { optionKey: string; optionValue: string; isCorrect: boolean }[];
   answer: string;
-  analysis: string;
-  tags: string[];
-  createTime: string;
-  updateTime: string;
+  analysis?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  tags?: string[];
+  createTime?: string;
+  updateTime?: string;
 }
 
-// 模拟考试数据
-const getMockExam = (id: number): ExamType => {
-  return {
-    id,
-    title: `考试${id}：${['政治模拟测试', '英语词汇测试', '数学综合测试', '专业课模拟考'][id % 4]}`,
-    description: `这是${['政治', '英语', '数学', '专业课'][id % 4]}模拟考试的详细描述，包含考试范围、要求等信息...`,
-    category: ['政治', '英语', '数学', '专业课'][id % 4],
-    startTime: '2023-12-01 09:00:00',
-    endTime: '2023-12-31 18:00:00',
-    duration: 120,
-    totalScore: 100,
-    passingScore: 60,
-    questionsCount: Math.floor(Math.random() * 20) + 10,
-    participants: Math.floor(Math.random() * 1000),
-    status: ['draft', 'published', 'ongoing', 'ended'][id % 4] as 'draft' | 'published' | 'ongoing' | 'ended',
-    createdAt: '2023-10-15 14:30:00',
-    updatedAt: '2023-11-01 10:15:00',
-    isPublic: true,
-    creator: `讲师${id % 5 + 1}`
-  };
-};
-
-// 模拟考试题目数据
-const getMockExamQuestions = (examId: number): ExamQuestionType[] => {
-  const count = Math.floor(Math.random() * 15) + 5;
-  return Array.from({ length: count }).map((_, index) => {
-    const qid = index + 1;
-    const type = ['single', 'multiple', 'judge', 'fillBlank', 'essay'][index % 5] as 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay';
-    const difficulty = ['easy', 'medium', 'hard'][index % 3] as 'easy' | 'medium' | 'hard';
-    
-    let options;
-    if (type === 'single' || type === 'multiple') {
-      options = [
-        { id: 'A', content: `选项A-${qid}` },
-        { id: 'B', content: `选项B-${qid}` },
-        { id: 'C', content: `选项C-${qid}` },
-        { id: 'D', content: `选项D-${qid}` }
-      ];
-    } else if (type === 'judge') {
-      options = [
-        { id: 'T', content: '正确' },
-        { id: 'F', content: '错误' }
-      ];
-    }
-    
-    return {
-      id: qid,
-      examId,
-      questionId: 100 + qid,
-      score: type === 'essay' ? 10 : type === 'multiple' ? 5 : 3,
-      sort: qid,
-      type,
-      content: `这是第${qid}题，${type === 'single' ? '单选题' : type === 'multiple' ? '多选题' : type === 'judge' ? '判断题' : type === 'fillBlank' ? '填空题' : '问答题'}。题目内容: ${['政治', '英语', '数学', '专业课'][examId % 4]}考试题目示例...`,
-      answer: type === 'single' ? 'A' : type === 'multiple' ? 'A,B' : type === 'judge' ? 'T' : `答案${qid}`,
-      options,
-      analysis: `本题考察了${['基础知识点', '计算能力', '分析能力', '理解能力'][qid % 4]}，解题关键在于...`,
-      difficulty
-    };
-  });
-};
-
-// 获取候选题目
-const getMockAvailableQuestions = (): QuestionType[] => {
-  return Array.from({ length: 20 }).map((_, index) => {
-    const qid = 200 + index;
-    const type = ['single', 'multiple', 'judge', 'fillBlank', 'essay'][index % 5] as 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay';
-    const difficulty = ['easy', 'medium', 'hard'][index % 3] as 'easy' | 'medium' | 'hard';
-    
-    let options;
-    if (type === 'single' || type === 'multiple') {
-      options = [
-        { id: 'A', content: `选项A-${qid}`, isCorrect: true },
-        { id: 'B', content: `选项B-${qid}`, isCorrect: type === 'multiple' },
-        { id: 'C', content: `选项C-${qid}`, isCorrect: false },
-        { id: 'D', content: `选项D-${qid}`, isCorrect: false }
-      ];
-    } else if (type === 'judge') {
-      options = [
-        { id: 'T', content: '正确', isCorrect: true },
-        { id: 'F', content: '错误', isCorrect: false }
-      ];
-    }
-    
-    return {
-      id: qid,
-      content: `这是题库中的第${qid}题，${type === 'single' ? '单选题' : type === 'multiple' ? '多选题' : type === 'judge' ? '判断题' : type === 'fillBlank' ? '填空题' : '问答题'}。题目内容示例...`,
-      type,
-      difficulty,
-      options,
-      answer: type === 'single' ? 'A' : type === 'multiple' ? 'A,B' : type === 'judge' ? 'T' : `答案${qid}`,
-      analysis: `本题的解析说明...`,
-      tags: [`标签${index % 5 + 1}`, `标签${index % 3 + 6}`],
-      createTime: '2023-05-15',
-      updateTime: '2023-08-20'
-    };
-  });
-};
-
 // 题目类型映射
-const questionTypeMap = {
-  single: { text: '单选题', color: 'blue' },
-  multiple: { text: '多选题', color: 'purple' },
-  judge: { text: '判断题', color: 'cyan' },
-  fillBlank: { text: '填空题', color: 'orange' },
-  essay: { text: '问答题', color: 'green' }
+const questionTypeMap: Record<number, { text: string; color: string }> = {
+  [QuestionTypeEnum.SINGLE_CHOICE]: { text: '单选题', color: 'blue' },
+  [QuestionTypeEnum.MULTIPLE_CHOICE]: { text: '多选题', color: 'purple' },
+  [QuestionTypeEnum.JUDGE]: { text: '判断题', color: 'cyan' },
+  [QuestionTypeEnum.FILL_BLANK]: { text: '填空题', color: 'orange' },
+  [QuestionTypeEnum.ESSAY]: { text: '问答题', color: 'green' }
 };
 
 // 难度级别映射
-const difficultyMap = {
+const difficultyMap: Record<string, { text: string; color: string }> = {
   easy: { text: '简单', color: 'success' },
   medium: { text: '中等', color: 'warning' },
   hard: { text: '困难', color: 'error' }
 };
 
 // 状态映射
-const statusMap = {
-  draft: { text: '草稿', color: 'default' },
-  published: { text: '已发布', color: 'blue' },
-  ongoing: { text: '进行中', color: 'green' },
-  ended: { text: '已结束', color: 'red' }
+const statusMap: Record<number, { text: string; color: string }> = {
+  [ExamStatus.UPCOMING]: { text: '即将开始', color: 'blue' },
+  [ExamStatus.ONGOING]: { text: '进行中', color: 'green' },
+  [ExamStatus.ENDED]: { text: '已结束', color: 'red' }
 };
+
+// 从后端返回的考试数据结构
+interface BackendExamType {
+  examId: number;
+  examName: string;
+  examDesc: string;
+  examStartTime: string;
+  examEndTime: string;
+  duration: number; // 分钟
+  totalScore: number;
+  passScore: number;
+  status: number;
+  createAt: string;
+  updateAt: string;
+  creatorId: number;
+  creatorName: string;
+  participantCount: number;
+  questions?: BackendQuestionType[];
+}
+
+// 从后端返回的题目数据结构
+interface BackendQuestionType {
+  examQuestionId: number | null;
+  questionId: number;
+  knowledgePoint: string;
+  questionText: string;
+  questionType: number;
+  difficultyLevel: number;
+  knowledgePoints?: {
+    knowledgePointId: number;
+    name: string;
+    description: string;
+  }[];
+  questionScore: number;
+  options?: {
+    optionId: number;
+    questionId: number;
+    optionKey: string;
+    optionValue: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
+  userAnswer: string | null;
+  isCorrect: boolean | null;
+}
 
 const ExamDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -238,112 +190,197 @@ const ExamDetail: React.FC = () => {
   }, [examIdNum]);
 
   // 获取考试详情
-  const fetchExamDetail = () => {
+  const fetchExamDetail = async () => {
     setLoading(true);
-    // 模拟API请求
-    setTimeout(() => {
-      const examData = getMockExam(examIdNum);
-      setExam(examData);
+    try {
+      const result = await getExamDetail(examIdNum);
+      if (result.success) {
+        const backendData = result.data as BackendExamType;
+        
+        // 转换为组件需要的数据格式
+        const formattedExam: ExamType = {
+          examId: backendData.examId,
+          name: backendData.examName,
+          description: backendData.examDesc,
+          startTime: backendData.examStartTime,
+          endTime: backendData.examEndTime,
+          duration: backendData.duration,
+          totalScore: backendData.totalScore,
+          status: backendData.status,
+          questionCount: backendData.questions?.length || 0,
+          participantCount: backendData.participantCount,
+          createTime: backendData.createAt,
+          updateTime: backendData.updateAt,
+          creatorName: backendData.creatorName,
+          passScore: backendData.passScore
+        };
+        
+        setExam(formattedExam);
+        
+        // 如果后端直接返回了题目数据，直接处理
+        if (backendData.questions && backendData.questions.length > 0) {
+          const formattedQuestions = formatBackendQuestions(backendData.questions);
+          setExamQuestions(formattedQuestions);
+          setQuestionsLoading(false);
+        }
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('获取考试详情失败:', error);
+      message.error('获取考试详情失败');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  // 将后端题目数据转换为组件需要的格式
+  const formatBackendQuestions = (backendQuestions: BackendQuestionType[]): ExamQuestionType[] => {
+    return backendQuestions.map((q, index) => ({
+      id: q.questionId,
+      examId: examIdNum,
+      questionId: q.questionId,
+      score: q.questionScore,
+      sort: index + 1,
+      type: q.questionType,
+      content: q.questionText,
+      answer: '', // 后端返回中似乎没有正确答案
+      options: q.options?.map(o => ({ id: o.optionKey, content: o.optionValue })),
+      analysis: '',
+      difficulty: mapDifficultyLevel(q.difficultyLevel)
+    }));
+  };
+
+  // 难度级别映射函数
+  const mapDifficultyLevel = (level: number): 'easy' | 'medium' | 'hard' => {
+    switch (level) {
+      case 0: return 'easy';
+      case 1: return 'medium';
+      case 2:
+      case 3:
+      case 4:
+      default: return 'hard';
+    }
   };
 
   // 获取考试题目
-  const fetchExamQuestions = () => {
+  const fetchExamQuestions = async () => {
     setQuestionsLoading(true);
-    // 模拟API请求
-    setTimeout(() => {
-      const questions = getMockExamQuestions(examIdNum);
-      setExamQuestions(questions);
+    try {
+      const result = await getExamQuestions(examIdNum);
+      if (result.success) {
+        setExamQuestions(result.data || []);
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('获取考试题目失败:', error);
+      message.error('获取考试题目失败');
+    } finally {
       setQuestionsLoading(false);
-    }, 800);
+    }
   };
 
   // 加载可用题目
   const loadAvailableQuestions = () => {
     setAvailableQuestionsLoading(true);
-    // 模拟API请求
+    // TODO: 从API获取可用题目
     setTimeout(() => {
-      const questions = getMockAvailableQuestions();
-      setAvailableQuestions(questions);
+      const mockQuestions = getMockAvailableQuestions();
+      setAvailableQuestions(mockQuestions);
       setAvailableQuestionsLoading(false);
-    }, 1000);
-  };
-
-  // 打开添加题目弹窗
-  const handleOpenAddQuestion = () => {
-    setSelectedQuestionIds([]);
-    loadAvailableQuestions();
-    setAddQuestionVisible(true);
-  };
-
-  // 确认添加题目
-  const handleConfirmAddQuestions = () => {
-    if (selectedQuestionIds.length === 0) {
-      message.warning('请至少选择一道题目');
-      return;
-    }
-
-    // 模拟添加题目到考试
-    const selectedQuestions = availableQuestions.filter(q => selectedQuestionIds.includes(q.id));
-    const newExamQuestions = selectedQuestions.map((q, index) => {
-      const existingCount = examQuestions.length;
-      return {
-        id: existingCount + index + 1,
-        examId: examIdNum,
-        questionId: q.id,
-        score: q.type === 'essay' ? questionDefaultScore * 2 : q.type === 'multiple' ? questionDefaultScore * 1.5 : questionDefaultScore,
-        sort: existingCount + index + 1,
-        type: q.type,
-        content: q.content,
-        answer: q.answer,
-        options: q.options,
-        analysis: q.analysis,
-        difficulty: q.difficulty
-      };
-    });
-
-    setExamQuestions([...examQuestions, ...newExamQuestions]);
-    if (exam) {
-      setExam({
-        ...exam,
-        questionsCount: exam.questionsCount + selectedQuestionIds.length,
-        updatedAt: new Date().toLocaleString()
-      });
-    }
-    message.success(`已添加 ${selectedQuestionIds.length} 道题目`);
-    setAddQuestionVisible(false);
-  };
-
-  // 删除考试题目
-  const handleDeleteQuestion = (questionId: number) => {
-    // 模拟API请求
-    setTimeout(() => {
-      setExamQuestions(prevQuestions => {
-        const newQuestions = prevQuestions.filter(q => q.id !== questionId);
-        
-        // 更新排序
-        const updatedQuestions = newQuestions.map((q, index) => ({
-          ...q,
-          sort: index + 1
-        }));
-        
-        return updatedQuestions;
-      });
-      
-      if (exam) {
-        setExam({
-          ...exam,
-          questionsCount: exam.questionsCount - 1,
-          updatedAt: new Date().toLocaleString()
-        });
-      }
-      
-      message.success('题目已从考试中移除');
     }, 500);
   };
 
-  // 编辑题目分数
+  // 打开添加题目对话框
+  const handleOpenAddQuestion = () => {
+    setAddQuestionVisible(true);
+    loadAvailableQuestions();
+    setSelectedQuestionIds([]);
+  };
+
+  // 确认添加题目
+  const handleConfirmAddQuestions = async () => {
+    if (selectedQuestionIds.length === 0) {
+      message.warning('请选择至少一道题目');
+      return;
+    }
+
+    setQuestionsLoading(true);
+    
+    try {
+      // 构建要添加的题目
+      const selectedQuestions = availableQuestions.filter(q => 
+        selectedQuestionIds.includes(q.questionId)
+      );
+      
+      const newExamQuestions = [
+        ...examQuestions,
+        ...selectedQuestions.map((q, index) => ({
+          id: Math.max(...examQuestions.map(eq => eq.id), 0) + index + 1,
+          examId: examIdNum,
+          questionId: q.questionId,
+          score: questionDefaultScore,
+          sort: examQuestions.length + index + 1,
+          type: q.questionType,
+          content: q.questionText,
+          answer: q.answer || '',
+          options: q.options?.map(o => ({ id: o.optionKey, content: o.optionValue })),
+          analysis: q.analysis || '',
+          difficulty: q.difficulty || 'medium'
+        }))
+      ];
+      
+      // 调用API更新考试题目
+      const result = await updateExamQuestions(examIdNum, newExamQuestions);
+      
+      if (result.success) {
+        message.success('题目添加成功');
+        setAddQuestionVisible(false);
+        fetchExamQuestions(); // 重新获取题目列表
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('添加题目失败:', error);
+      message.error('添加题目失败');
+    } finally {
+      setQuestionsLoading(false);
+    }
+  };
+
+  // 删除题目
+  const handleDeleteQuestion = async (questionId: number) => {
+    try {
+      setQuestionsLoading(true);
+      
+      // 过滤掉要删除的题目
+      const updatedQuestions = examQuestions.filter(q => q.id !== questionId);
+      
+      // 重新排序
+      const sortedQuestions = updatedQuestions.map((q, index) => ({
+        ...q,
+        sort: index + 1
+      }));
+      
+      // 调用API更新考试题目
+      const result = await updateExamQuestions(examIdNum, sortedQuestions);
+      
+      if (result.success) {
+        message.success('题目删除成功');
+        setExamQuestions(sortedQuestions);
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('删除题目失败:', error);
+      message.error('删除题目失败');
+    } finally {
+      setQuestionsLoading(false);
+    }
+  };
+
+  // 打开编辑分数对话框
   const handleEditScore = (question: ExamQuestionType) => {
     setCurrentQuestion(question);
     scoreForm.setFieldsValue({ score: question.score });
@@ -351,65 +388,66 @@ const ExamDetail: React.FC = () => {
   };
 
   // 保存题目分数
-  const handleSaveScore = () => {
-    scoreForm.validateFields().then(values => {
+  const handleSaveScore = async () => {
+    try {
+      const values = await scoreForm.validateFields();
       if (!currentQuestion) return;
-
-      setExamQuestions(prevQuestions => 
-        prevQuestions.map(q => q.id === currentQuestion.id ? { ...q, score: values.score } : q)
+      
+      setQuestionsLoading(true);
+      
+      // 更新当前题目分数
+      const updatedQuestions = examQuestions.map(q => 
+        q.id === currentQuestion.id ? { ...q, score: values.score } : q
       );
       
-      message.success('题目分数已更新');
-      setEditScoreVisible(false);
-      setCurrentQuestion(null);
-    });
+      // 调用API更新考试题目
+      const result = await updateExamQuestions(examIdNum, updatedQuestions);
+      
+      if (result.success) {
+        message.success('分数更新成功');
+        setEditScoreVisible(false);
+        setExamQuestions(updatedQuestions);
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('更新分数失败:', error);
+      message.error('更新分数失败');
+    } finally {
+      setQuestionsLoading(false);
+    }
   };
 
   // 发布考试
   const handlePublishExam = () => {
     if (!exam) return;
     
+    // 检查考试是否有题目
     if (examQuestions.length === 0) {
-      message.error('考试题目为空，请先添加题目再发布考试');
+      message.warning('考试还没有添加题目，无法发布');
       return;
     }
     
-    // 计算总分
-    const totalScore = examQuestions.reduce((sum, q) => sum + q.score, 0);
-    
-    // 显示确认对话框
+    // 确认对话框
     Modal.confirm({
-      title: '确认发布考试',
+      title: '发布考试',
       icon: <ExclamationCircleOutlined />,
       content: (
         <div>
-          <p>发布后考试将对学生可见，确定要发布吗？</p>
-          <p>
-            <Text>考试题目数：</Text>
-            <Text strong>{examQuestions.length}</Text>
-          </p>
-          <p>
-            <Text>考试总分：</Text>
-            <Text strong>{totalScore}</Text> 
-            {totalScore !== exam.totalScore && (
-              <Text type="warning"> (与设置总分 {exam.totalScore} 不一致)</Text>
-            )}
-          </p>
+          <p>确定要发布这个考试吗？发布后考生将可以看到此考试。</p>
+          <p>考试名称: {exam.name}</p>
+          <p>开始时间: {dayjs(exam.startTime).format('YYYY-MM-DD HH:mm')}</p>
+          <p>结束时间: {dayjs(exam.endTime).format('YYYY-MM-DD HH:mm')}</p>
+          <p>考试时长: {exam.duration}分钟</p>
+          <p>题目数量: {examQuestions.length}</p>
+          <p>总分值: {examQuestions.reduce((sum, q) => sum + q.score, 0)}</p>
         </div>
       ),
-      okText: '确认发布',
+      okText: '发布',
       cancelText: '取消',
       onOk() {
-        // 模拟API请求
-        setTimeout(() => {
-          setExam({
-            ...exam,
-            status: 'published',
-            totalScore,
-            updatedAt: new Date().toLocaleString()
-          });
-          message.success('考试已发布');
-        }, 1000);
+        // TODO: 调用API发布考试
+        message.success('考试已发布');
       }
     });
   };
@@ -419,85 +457,61 @@ const ExamDetail: React.FC = () => {
     navigate('/admin/exams');
   };
 
-  // 候选题目表格列
-  const availableQuestionsColumns: ColumnsType<QuestionType> = [
-    {
-      title: '题目ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80
-    },
-    {
-      title: '题目类型',
-      dataIndex: 'type',
-      key: 'type',
-      width: 100,
-      render: (type: 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay') => <Tag color={questionTypeMap[type].color}>{questionTypeMap[type].text}</Tag>
-    },
-    {
-      title: '难度',
-      dataIndex: 'difficulty',
-      key: 'difficulty',
-      width: 80,
-      render: (difficulty: 'easy' | 'medium' | 'hard') => (
-        <Tag color={difficultyMap[difficulty].color}>{difficultyMap[difficulty].text}</Tag>
-      )
-    },
-    {
-      title: '题目内容',
-      dataIndex: 'content',
-      key: 'content',
-      ellipsis: true
-    },
-    {
-      title: '标签',
-      dataIndex: 'tags',
-      key: 'tags',
-      width: 150,
-      render: (tags: string[]) => (
-        <Space size={[0, 4]} wrap>
-          {tags.map(tag => <Tag key={tag}>{tag}</Tag>)}
-        </Space>
-      )
-    }
-  ];
-
-  // 考试题目表格列
-  const examQuestionsColumns: ColumnsType<ExamQuestionType> = [
+  // 考试题目表格列定义
+  const questionsColumns: ColumnsType<ExamQuestionType> = [
     {
       title: '序号',
       dataIndex: 'sort',
       key: 'sort',
-      width: 60
+      width: 60,
     },
     {
-      title: '题目类型',
+      title: '类型',
       dataIndex: 'type',
       key: 'type',
       width: 100,
-      render: (type: 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay') => <Tag color={questionTypeMap[type].color}>{questionTypeMap[type].text}</Tag>
-    },
-    {
-      title: '难度',
-      dataIndex: 'difficulty',
-      key: 'difficulty',
-      width: 80,
-      render: (difficulty: 'easy' | 'medium' | 'hard') => (
-        <Tag color={difficultyMap[difficulty].color}>{difficultyMap[difficulty].text}</Tag>
+      render: (type) => (
+        <Tag color={questionTypeMap[type]?.color}>
+          {questionTypeMap[type]?.text}
+        </Tag>
       )
     },
     {
       title: '题目内容',
       dataIndex: 'content',
       key: 'content',
-      ellipsis: true
+      ellipsis: true,
+    },
+    {
+      title: '选项/答案',
+      key: 'options',
+      width: 200,
+      render: (_, record) => {
+        if (record.type === QuestionTypeEnum.SINGLE_CHOICE || record.type === QuestionTypeEnum.MULTIPLE_CHOICE) {
+          return (
+            <div>
+              {record.options?.map(option => (
+                <div key={option.id}>
+                  {option.id}: {option.content}
+                </div>
+              ))}
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary">答案: {record.answer}</Text>
+              </div>
+            </div>
+          );
+        } else if (record.type === QuestionTypeEnum.JUDGE) {
+          return <Text type="secondary">答案: {record.answer === 'T' ? '正确' : '错误'}</Text>;
+        } else {
+          return <Text type="secondary">答案: {record.answer}</Text>;
+        }
+      }
     },
     {
       title: '分值',
       dataIndex: 'score',
       key: 'score',
       width: 80,
-      render: (score) => <Text strong>{score}</Text>
     },
     {
       title: '操作',
@@ -506,32 +520,57 @@ const ExamDetail: React.FC = () => {
       render: (_, record) => (
         <Space>
           <Button 
-            type="link" 
-            size="small" 
+            type="text" 
             icon={<EditOutlined />} 
             onClick={() => handleEditScore(record)}
-            disabled={exam?.status !== 'draft'}
-          >
-            编辑分值
-          </Button>
+          />
           <Popconfirm
-            title="确定从考试中移除此题目吗？"
+            title="确定要删除这道题目吗？"
             onConfirm={() => handleDeleteQuestion(record.id)}
             okText="确定"
             cancelText="取消"
-            disabled={exam?.status !== 'draft'}
           >
             <Button 
-              type="link" 
+              type="text" 
               danger 
-              size="small" 
-              icon={<DeleteOutlined />}
-              disabled={exam?.status !== 'draft'}
-            >
-              删除
-            </Button>
+              icon={<DeleteOutlined />} 
+            />
           </Popconfirm>
         </Space>
+      )
+    }
+  ];
+
+  // 可用题目表格列定义
+  const availableQuestionsColumns: ColumnsType<QuestionType> = [
+    {
+      title: '类型',
+      dataIndex: 'questionType',
+      key: 'questionType',
+      width: 100,
+      render: (type) => (
+        <Tag color={questionTypeMap[type]?.color}>
+          {questionTypeMap[type]?.text}
+        </Tag>
+      )
+    },
+    {
+      title: '题目内容',
+      dataIndex: 'questionText',
+      key: 'questionText',
+      ellipsis: true,
+    },
+    {
+      title: '难度',
+      dataIndex: 'difficulty',
+      key: 'difficulty',
+      width: 80,
+      render: (difficulty) => (
+        difficulty ? (
+          <Tag color={difficultyMap[difficulty]?.color}>
+            {difficultyMap[difficulty]?.text}
+          </Tag>
+        ) : null
       )
     }
   ];
@@ -541,118 +580,109 @@ const ExamDetail: React.FC = () => {
       <Card
         title={
           <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={handleBack} />
-            考试详情
-          </Space>
-        }
-        extra={
-          <Space>
-            {exam?.status === 'draft' && (
-              <>
-                <Button
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  onClick={() => message.success('考试已保存')}
-                >
-                  保存
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handlePublishExam}
-                >
-                  发布考试
-                </Button>
-              </>
-            )}
-            <Button icon={<PrinterOutlined />}>导出考卷</Button>
-            <Button icon={<SettingOutlined />}>考试设置</Button>
+            <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>返回</Button>
+            <span>{exam?.name || '考试详情'}</span>
           </Space>
         }
         loading={loading}
+        extra={
+          exam?.status === ExamStatus.UPCOMING && (
+            <Space>
+              <Button onClick={() => navigate(`/admin/exams/edit/${examIdNum}`)}>
+                <EditOutlined /> 编辑考试
+              </Button>
+              <Button type="primary" onClick={handlePublishExam}>
+                <SaveOutlined /> 发布考试
+              </Button>
+            </Space>
+          )
+        }
       >
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           <TabPane tab="考试信息" key="info">
             {exam && (
-              <Descriptions bordered column={2}>
-                <Descriptions.Item label="考试名称" span={2}>{exam.title}</Descriptions.Item>
-                <Descriptions.Item label="考试类别">{exam.category}</Descriptions.Item>
-                <Descriptions.Item label="考试状态">
-                  <Tag color={statusMap[exam.status].color}>{statusMap[exam.status].text}</Tag>
+              <Descriptions bordered column={{ xxl: 4, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 }}>
+                <Descriptions.Item label="考试名称">{exam.name}</Descriptions.Item>
+                <Descriptions.Item label="创建者">{exam.creatorName}</Descriptions.Item>
+                <Descriptions.Item label="创建时间">{dayjs(exam.createTime).format('YYYY-MM-DD HH:mm')}</Descriptions.Item>
+                <Descriptions.Item label="状态">
+                  <Tag color={statusMap[exam.status]?.color}>
+                    {statusMap[exam.status]?.text}
+                  </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="开始时间">{exam.startTime}</Descriptions.Item>
-                <Descriptions.Item label="结束时间">{exam.endTime}</Descriptions.Item>
-                <Descriptions.Item label="考试时长">{exam.duration} 分钟</Descriptions.Item>
-                <Descriptions.Item label="题目数量">{exam.questionsCount}</Descriptions.Item>
-                <Descriptions.Item label="总分值">{exam.totalScore}</Descriptions.Item>
-                <Descriptions.Item label="及格分数">{exam.passingScore}</Descriptions.Item>
-                <Descriptions.Item label="创建者">{exam.creator}</Descriptions.Item>
-                <Descriptions.Item label="创建时间">{exam.createdAt}</Descriptions.Item>
-                <Descriptions.Item label="可见性">{exam.isPublic ? '公开' : '私有'}</Descriptions.Item>
-                <Descriptions.Item label="参与人数">{exam.participants}</Descriptions.Item>
-                <Descriptions.Item label="更新时间">{exam.updatedAt}</Descriptions.Item>
-                <Descriptions.Item label="考试描述" span={2}>{exam.description}</Descriptions.Item>
+                <Descriptions.Item label="开始时间">{dayjs(exam.startTime).format('YYYY-MM-DD HH:mm')}</Descriptions.Item>
+                <Descriptions.Item label="结束时间">{dayjs(exam.endTime).format('YYYY-MM-DD HH:mm')}</Descriptions.Item>
+                <Descriptions.Item label="考试时长">{exam.duration}分钟</Descriptions.Item>
+                <Descriptions.Item label="参与人数">{exam.participantCount || 0}人</Descriptions.Item>
+                <Descriptions.Item label="题目数量">{examQuestions.length}题</Descriptions.Item>
+                <Descriptions.Item label="总分值">{examQuestions.reduce((sum, q) => sum + q.score, 0)}分</Descriptions.Item>
+                <Descriptions.Item label="及格分数">{exam.passScore || Math.floor(examQuestions.reduce((sum, q) => sum + q.score, 0) * 0.6)}分</Descriptions.Item>
+                <Descriptions.Item label="考试描述" span={4}>
+                  {exam.description}
+                </Descriptions.Item>
               </Descriptions>
             )}
           </TabPane>
           
-          <TabPane tab="考试题目" key="questions">
+          <TabPane tab="题目管理" key="questions">
             <div style={{ marginBottom: 16 }}>
-              {exam?.status === 'draft' && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
+              <Space>
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />} 
                   onClick={handleOpenAddQuestion}
+                  disabled={exam?.status !== ExamStatus.UPCOMING}
                 >
                   添加题目
                 </Button>
-              )}
-              {examQuestions.length > 0 && (
-                <div style={{ marginTop: 16 }}>
-                  <Text>题目总数：{examQuestions.length}</Text>
-                  <Divider type="vertical" />
-                  <Text>总分值：{examQuestions.reduce((sum, q) => sum + q.score, 0)}</Text>
-                  
-                  {examQuestions.reduce((sum, q) => sum + q.score, 0) !== (exam?.totalScore || 0) && (
-                    <Text type="warning" style={{ marginLeft: 8 }}>
-                      (注意：当前总分值与考试设置的总分值不一致)
-                    </Text>
-                  )}
-                </div>
-              )}
+                <span>总题数: {examQuestions.length}</span>
+                <span>总分值: {examQuestions.reduce((sum, q) => sum + q.score, 0)}分</span>
+              </Space>
             </div>
             
             <Table
-              columns={examQuestionsColumns}
+              columns={questionsColumns}
               dataSource={examQuestions}
               rowKey="id"
               loading={questionsLoading}
-              pagination={{ pageSize: 10 }}
+              pagination={false}
             />
+          </TabPane>
+          
+          <TabPane tab="统计分析" key="statistics">
+            <div style={{ padding: 24, background: '#f0f2f5', minHeight: 300 }}>
+              {/* TODO: 统计图表 */}
+              <p>本考试尚未有学生参加或尚未统计数据。</p>
+            </div>
           </TabPane>
         </Tabs>
       </Card>
-      
-      {/* 添加题目弹窗 */}
+
+      {/* 添加题目对话框 */}
       <Modal
         title="添加题目"
-        visible={addQuestionVisible}
+        open={addQuestionVisible}
+        width={800}
         onCancel={() => setAddQuestionVisible(false)}
-        width={900}
-        onOk={handleConfirmAddQuestions}
+        footer={[
+          <Button key="cancel" onClick={() => setAddQuestionVisible(false)}>取消</Button>,
+          <Button 
+            key="add" 
+            type="primary" 
+            onClick={handleConfirmAddQuestions}
+            disabled={selectedQuestionIds.length === 0}
+          >
+            添加选中的{selectedQuestionIds.length}道题目
+          </Button>
+        ]}
       >
-        <Form layout="inline" style={{ marginBottom: 16 }}>
-          <Form.Item label="默认题目分值">
+        <Form layout="vertical">
+          <Form.Item label="每题分值" required tooltip="为所有选中的题目设置相同的分值">
             <InputNumber 
-              min={0.5} 
-              max={100} 
-              step={0.5} 
+              min={1} 
               value={questionDefaultScore} 
-              onChange={value => setQuestionDefaultScore(Number(value) || 3)} 
+              onChange={val => setQuestionDefaultScore(val || 1)} 
             />
-            <Text type="secondary" style={{ marginLeft: 8 }}>
-              (单选题×1，多选题×1.5，问答题×2)
-            </Text>
           </Form.Item>
         </Form>
         
@@ -660,40 +690,74 @@ const ExamDetail: React.FC = () => {
           rowSelection={{
             type: 'checkbox',
             selectedRowKeys: selectedQuestionIds,
-            onChange: (selectedRowKeys) => {
-              setSelectedQuestionIds(selectedRowKeys as number[]);
-            }
+            onChange: keys => setSelectedQuestionIds(keys as number[])
           }}
           columns={availableQuestionsColumns}
           dataSource={availableQuestions}
-          rowKey="id"
+          rowKey="questionId"
           loading={availableQuestionsLoading}
-          pagination={{ pageSize: 5 }}
+          pagination={{ pageSize: 10 }}
         />
       </Modal>
-      
-      {/* 编辑分值弹窗 */}
+
+      {/* 编辑分数对话框 */}
       <Modal
         title="编辑题目分值"
-        visible={editScoreVisible}
-        onCancel={() => {
-          setEditScoreVisible(false);
-          setCurrentQuestion(null);
-        }}
+        open={editScoreVisible}
+        onCancel={() => setEditScoreVisible(false)}
         onOk={handleSaveScore}
+        okText="保存"
+        cancelText="取消"
       >
-        <Form form={scoreForm}>
+        <Form form={scoreForm} layout="vertical">
           <Form.Item
             name="score"
             label="分值"
             rules={[{ required: true, message: '请输入分值' }]}
           >
-            <InputNumber min={0.5} max={100} step={0.5} style={{ width: '100%' }} />
+            <InputNumber min={1} />
           </Form.Item>
         </Form>
       </Modal>
     </AdminLayout>
   );
+};
+
+// 获取候选题目（临时使用，后续应从API获取）
+const getMockAvailableQuestions = (): QuestionType[] => {
+  return Array.from({ length: 20 }).map((_, index) => {
+    const qid = 200 + index;
+    const type = [QuestionTypeEnum.SINGLE_CHOICE, QuestionTypeEnum.MULTIPLE_CHOICE, QuestionTypeEnum.JUDGE, QuestionTypeEnum.FILL_BLANK, QuestionTypeEnum.ESSAY][index % 5];
+    const difficulty = ['easy', 'medium', 'hard'][index % 3] as 'easy' | 'medium' | 'hard';
+    
+    let options;
+    if (type === QuestionTypeEnum.SINGLE_CHOICE || type === QuestionTypeEnum.MULTIPLE_CHOICE) {
+      options = [
+        { optionKey: 'A', optionValue: `选项A-${qid}`, isCorrect: true },
+        { optionKey: 'B', optionValue: `选项B-${qid}`, isCorrect: type === QuestionTypeEnum.MULTIPLE_CHOICE },
+        { optionKey: 'C', optionValue: `选项C-${qid}`, isCorrect: false },
+        { optionKey: 'D', optionValue: `选项D-${qid}`, isCorrect: false }
+      ];
+    } else if (type === QuestionTypeEnum.JUDGE) {
+      options = [
+        { optionKey: 'T', optionValue: '正确', isCorrect: true },
+        { optionKey: 'F', optionValue: '错误', isCorrect: false }
+      ];
+    }
+    
+    return {
+      questionId: qid,
+      questionText: `这是题库中的第${qid}题，${type === QuestionTypeEnum.SINGLE_CHOICE ? '单选题' : type === QuestionTypeEnum.MULTIPLE_CHOICE ? '多选题' : type === QuestionTypeEnum.JUDGE ? '判断题' : type === QuestionTypeEnum.FILL_BLANK ? '填空题' : '问答题'}。题目内容示例...`,
+      questionType: type,
+      difficulty,
+      options,
+      answer: type === QuestionTypeEnum.SINGLE_CHOICE ? 'A' : type === QuestionTypeEnum.MULTIPLE_CHOICE ? 'A,B' : type === QuestionTypeEnum.JUDGE ? 'T' : `答案${qid}`,
+      analysis: `本题的解析说明...`,
+      tags: [`标签${index % 5 + 1}`, `标签${index % 3 + 6}`],
+      createTime: '2023-05-15',
+      updateTime: '2023-08-20'
+    };
+  });
 };
 
 export default ExamDetail; 

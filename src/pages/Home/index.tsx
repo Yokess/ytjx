@@ -11,7 +11,8 @@ import {
   WeiboOutlined,
   UserOutlined,
   DownOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  DashboardOutlined
 } from '@ant-design/icons';
 import styles from './Home.module.scss';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
@@ -59,6 +60,11 @@ const HomePage: React.FC = () => {
       <Menu.Item key="profile" icon={<UserOutlined />}>
         <Link to="/user">个人中心</Link>
       </Menu.Item>
+      {user?.userType === 2 && (
+        <Menu.Item key="admin" icon={<DashboardOutlined />}>
+          <Link to="/admin">管理后台</Link>
+        </Menu.Item>
+      )}
       <Menu.Divider />
       <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
         退出登录
@@ -78,6 +84,9 @@ const HomePage: React.FC = () => {
             <Link to="/questions" className={styles.navLink}>在线题库</Link>
             <Link to="/ai-assistant" className={styles.navLink}>智能助手</Link>
             <Link to="/community" className={styles.navLink}>学习社区</Link>
+            {isAuthenticated && user?.userType === 2 && (
+              <Link to="/admin" className={`${styles.navLink} ${styles.adminLink}`}>管理后台</Link>
+            )}
           </div>
           <div className={styles.authButtons}>
             {isAuthenticated && user ? (
@@ -120,6 +129,17 @@ const HomePage: React.FC = () => {
               <div className={styles.heroButtons}>
                 <Button type="primary" className={styles.primaryButton}>免费试用</Button>
                 <Button className={styles.secondaryButton}>了解更多</Button>
+                {isAuthenticated && user?.userType === 2 && (
+                  <Button 
+                    type="primary" 
+                    icon={<DashboardOutlined />} 
+                    className={styles.adminButton}
+                    onClick={() => navigate('/admin')}
+                    danger
+                  >
+                    进入管理后台
+                  </Button>
+                )}
               </div>
             </Col>
             <Col xs={24} md={24} lg={12} className={styles.heroImageCol}>
@@ -263,7 +283,7 @@ const HomePage: React.FC = () => {
             </Col>
           </Row>
           <div className={styles.copyright}>
-            © 2023 研途九霄 版权所有
+            © 2025 研途九霄 版权所有
           </div>
         </div>
       </footer>

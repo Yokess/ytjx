@@ -47,6 +47,20 @@ http.interceptors.response.use(
       headers: response.headers
     });
     
+    // 检查响应中是否有token无效的信息
+    if (response.data && response.data.code === 401) {
+      console.error('响应中检测到401错误码，token可能已失效');
+      // 清除登录信息
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userType');
+      
+      // 跳转到登录页
+      window.location.href = '/login';
+      return Promise.reject(new Error('登录状态已失效，请重新登录'));
+    }
+    
     return response;
   },
   error => {
@@ -54,12 +68,19 @@ http.interceptors.response.use(
     
     // 如果是401错误，可能是token过期，清除本地存储
     if (error.response && error.response.status === 401) {
+      console.error('检测到401状态码，token已失效，清除登录状态并跳转登录页');
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       localStorage.removeItem('username');
+      localStorage.removeItem('userType');
       
-      // 可以添加重定向到登录页的逻辑
-      window.location.href = '/login';
+      // 检查当前是否不在登录页
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login' && currentPath !== '/register') {
+        // 重定向到登录页的逻辑
+        console.log('重定向到登录页...');
+        window.location.href = '/login';
+      }
     }
     
     return Promise.reject(error);

@@ -14,8 +14,8 @@ import {
 import MainLayout from '../../components/layout/MainLayout';
 import styles from './Community.module.scss';
 import { useNavigate, Link } from 'react-router-dom';
-import { getColumns, getPosts, getSections, getHotTags, getCommunityUserInfo } from '../../api/communityApi';
-import type { Post, Section, Column, UserInfo } from '../../types/community';
+import { getPosts, getSections } from '../../api/communityApi';
+import type { Post, Section, PageResult } from '../../types/community';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -175,7 +175,7 @@ const userInfo = {
 
 const CommunityPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('latest');
-  const [selectedSection, setSelectedSection] = useState('all');
+  const [selectedSection, setSelectedSection] = useState<number | 'all'>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
@@ -183,30 +183,18 @@ const CommunityPage: React.FC = () => {
   
   // 状态管理
   const [loading, setLoading] = useState(true);
-  const [columns, setColumns] = useState<Column[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [featuredPosts, setFeaturedPosts] = useState<Post[]>([]);
   const [totalPosts, setTotalPosts] = useState(0);
   const [sections, setSections] = useState<Section[]>([]);
-  const [hotTags, setHotTags] = useState<string[]>([]);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   
   // 加载数据
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchSections = async () => {
       setLoading(true);
       try {
-        // 并行请求数据
-        const [columnsRes, sectionsRes, hotTagsRes, userInfoRes] = await Promise.all([
-          getColumns(),
-          getSections(),
-          getHotTags(),
-          getCommunityUserInfo()
-        ]);
-        
-        setColumns(columnsRes.data.columns);
-        setSections(sectionsRes.data);
-        setHotTags(hotTagsRes.data);
-        setUserInfo(userInfoRes.data);
+        const response = await getSections();
+        setSections(response.data);
       } catch (error) {
         console.error('获取社区数据失败', error);
         message.error('获取社区数据失败，请稍后重试');
@@ -214,7 +202,29 @@ const CommunityPage: React.FC = () => {
       setLoading(false);
     };
     
-    fetchInitialData();
+    fetchSections();
+  }, []);
+  
+  // 加载精选帖子
+  useEffect(() => {
+    const fetchFeaturedPosts = async () => {
+      try {
+        const res = await getPosts({
+          pageNum: 1,
+          pageSize: 3,
+          sortBy: 'featured',
+        });
+        
+        const pageResult: PageResult<Post> = res.data;
+        // 过滤出真正的精华帖子
+        const essencePosts = pageResult.list.filter(post => post.isEssence === true);
+        setFeaturedPosts(essencePosts);
+      } catch (error) {
+        console.error('获取精选帖子失败', error);
+      }
+    };
+    
+    fetchFeaturedPosts();
   }, []);
   
   // 加载帖子数据
@@ -223,15 +233,17 @@ const CommunityPage: React.FC = () => {
       setLoading(true);
       try {
         const res = await getPosts({
-          page,
+          pageNum: page,
           pageSize,
           sortBy: activeTab as 'latest' | 'hot' | 'featured',
-          section: selectedSection !== 'all' ? selectedSection : undefined,
+          sectionId: selectedSection !== 'all' ? selectedSection : undefined,
           keyword: searchKeyword || undefined
         });
         
-        setPosts(res.data.posts);
-        setTotalPosts(res.data.total);
+        // 使用新的API响应格式
+        const pageResult: PageResult<Post> = res.data;
+        setPosts(pageResult.list);
+        setTotalPosts(pageResult.total);
       } catch (error) {
         console.error('获取帖子列表失败', error);
         message.error('获取帖子列表失败，请稍后重试');
@@ -259,12 +271,49 @@ const CommunityPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
+  // 帖子数据转换，将新格式转换为页面展示所需格式
+  const convertPostForDisplay = (post: Post) => {
+    // 构建标签和颜色
+    const tags = [];
+    const tagColors = [];
+    
+    if (post.isTop) {
+      tags.push('置顶');
+      tagColors.push('red');
+    }
+    
+    if (post.isEssence) {
+      tags.push('精华');
+      tagColors.push('green');
+    }
+    
+    tags.push(post.sectionName);
+    tagColors.push('blue');
+    
+    // 返回转换后的格式
+    return {
+      id: post.postId,
+      title: post.postTitle,
+      content: post.postSummary || '',
+      tags,
+      tagColors,
+      author: {
+        name: post.username,
+        avatar: post.userAvatar || 'https://joeschmoe.io/api/v1/random'
+      },
+      date: new Date(post.createdAt).toLocaleDateString(),
+      views: post.postViews,
+      comments: post.postComments,
+      likes: post.postLikes
+    };
+  };
+  
   // 侧边栏内容
   const sidebarContent = (
     <div className={styles.sidebar}>
       {/* 用户信息卡片 */}
       <Card className={styles.userCard}>
-        {loading || !userInfo ? (
+        {loading ? (
           <Skeleton avatar active paragraph={{ rows: 3 }} />
         ) : (
           <>
@@ -316,29 +365,43 @@ const CommunityPage: React.FC = () => {
               </div>
               <Tag color="orange">全部</Tag>
             </div>
-            {sections.map((section, index) => {
-              // 将图标名称映射到对应的图标组件
-              let IconComponent;
-              switch(section.icon) {
-                case 'MessageOutlined': IconComponent = MessageOutlined; break;
-                case 'StarOutlined': IconComponent = StarOutlined; break;
-                case 'LikeOutlined': IconComponent = LikeOutlined; break;
-                case 'TeamOutlined': IconComponent = TeamOutlined; break;
-                case 'NotificationOutlined': IconComponent = NotificationOutlined; break;
-                default: IconComponent = MessageOutlined;
-              }
+            {sections.map((section) => {
+              // 选择图标
+              const iconMap = {
+                '问答讨论': <MessageOutlined />,
+                '经验分享': <StarOutlined />,
+                '院校信息': <LikeOutlined />,
+                '学习小组': <TeamOutlined />,
+                '考研资讯': <NotificationOutlined />
+              };
+              
+              // 选择颜色
+              const colorMap: Record<string, string> = {
+                '问答讨论': 'blue',
+                '经验分享': 'green',
+                '院校信息': 'cyan',
+                '学习小组': 'purple',
+                '考研资讯': 'red'
+              };
+              
+              // 默认图标
+              const defaultIcon = <MessageOutlined />;
+              
+              // 根据版块名获取图标
+              const icon = iconMap[section.sectionName as keyof typeof iconMap] || defaultIcon;
+              const color = colorMap[section.sectionName] || 'blue';
               
               return (
                 <div 
-                  key={index} 
+                  key={section.sectionId} 
                   className={styles.sectionItem}
-                  onClick={() => setSelectedSection(section.name)}
+                  onClick={() => setSelectedSection(section.sectionId)}
                 >
                   <div className={styles.sectionInfo}>
-                    <IconComponent />
-                    <Text strong>{section.name}</Text>
+                    {icon}
+                    <Text strong>{section.sectionName}</Text>
                   </div>
-                  <Tag color={section.color}>{section.count}</Tag>
+                  <Tag color={color}>{section.postCount}</Tag>
                 </div>
               );
             })}
@@ -397,13 +460,13 @@ const CommunityPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 专栏推荐 */}
+      {/* 精选帖子 */}
       <div className={styles.columnsSection}>
         <div className={styles.sectionHeader}>
-          <Title level={4}>精选专栏</Title>
-          <Link to="/community/columns" className={styles.viewMore}>查看全部</Link>
+          <Title level={4}>精选帖子</Title>
+          <Link to="/community?sortBy=featured" className={styles.viewMore}>查看全部</Link>
         </div>
-        {loading ? (
+        {loading && featuredPosts.length === 0 ? (
           <div className={styles.columnsList}>
             {[1, 2, 3].map(i => (
               <Card key={i} className={styles.columnCard}>
@@ -411,39 +474,51 @@ const CommunityPage: React.FC = () => {
               </Card>
             ))}
           </div>
+        ) : featuredPosts.length === 0 ? (
+          <div className={styles.emptyPosts}>
+            <Text type="secondary">暂无精选帖子</Text>
+          </div>
         ) : (
           <div className={styles.columnsList}>
-            {columns.map(column => (
-              <Card 
-                key={column.id} 
-                className={styles.columnCard}
-                hoverable
-                onClick={() => navigate(`/community/column/${column.id}`)}
-              >
-                <div 
-                  className={styles.columnCover} 
-                  style={{ background: column.cover }}
+            {featuredPosts.map(post => {
+              const displayPost = convertPostForDisplay(post);
+              return (
+                <Card 
+                  key={displayPost.id} 
+                  className={styles.featuredPostCard}
+                  hoverable
+                  onClick={() => navigate(`/community/post/${displayPost.id}`)}
                 >
-                  <div className={styles.columnTitle}>{column.title}</div>
-                </div>
-                <div className={styles.columnContent}>
-                  <div className={styles.columnAuthor}>
-                    <Avatar src={column.author.avatar} />
-                    <div>
-                      <Text strong>{column.author.name}</Text>
-                      <div className={styles.authorTitle}>{column.author.title}</div>
+                  <div className={styles.postHeader}>
+                    <div className={styles.postMeta}>
+                      <div className={styles.userInfo}>
+                        <Avatar src={displayPost.author.avatar} />
+                        <Text strong>{displayPost.author.name}</Text>
+                      </div>
+                      <div className={styles.postTime}>{displayPost.date}</div>
+                    </div>
+                    <div className={styles.postTitle}>
+                      <Link to={`/community/post/${displayPost.id}`}>{displayPost.title}</Link>
+                    </div>
+                    <div className={styles.postContent}>
+                      <Paragraph ellipsis={{ rows: 2 }}>{displayPost.content}</Paragraph>
                     </div>
                   </div>
-                  <Paragraph ellipsis={{ rows: 2 }} className={styles.columnDesc}>
-                    {column.description}
-                  </Paragraph>
-                  <div className={styles.columnMeta}>
-                    <Text type="secondary">已更新：{column.articles}篇</Text>
-                    <Text type="secondary">阅读：{column.views}</Text>
+                  <div className={styles.postFooter}>
+                    <div className={styles.postTags}>
+                      {displayPost.tags.map((tag: string, index: number) => (
+                        <Tag key={index} color={displayPost.tagColors?.[index] || '#4f46e5'}>{tag}</Tag>
+                      ))}
+                    </div>
+                    <div className={styles.postMeta}>
+                      <span><EyeOutlined /> {displayPost.views}</span>
+                      <span><MessageOutlined /> {displayPost.comments}</span>
+                      <span><LikeOutlined /> {displayPost.likes || 0}</span>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -466,8 +541,8 @@ const CommunityPage: React.FC = () => {
             className={styles.sectionSelect}
           >
             <Option value="all">全部板块</Option>
-            {sections.map((section, index) => (
-              <Option key={index} value={section.name}>{section.name}</Option>
+            {sections.map((section) => (
+              <Option key={section.sectionId} value={section.sectionId}>{section.sectionName}</Option>
             ))}
           </Select>
         </div>
@@ -488,42 +563,47 @@ const CommunityPage: React.FC = () => {
           </div>
         ) : (
           <div className={styles.postsList}>
-            {posts.map(post => (
-              <Card 
-                key={post.id} 
-                className={styles.postCard}
-                hoverable
-                onClick={() => navigate(`/community/post/${post.id}`)}
-              >
-                <div className={styles.postHeader}>
-                  <div className={styles.postMeta}>
-                    <div className={styles.userInfo}>
-                      <Avatar src={post.author.avatar} />
-                      <Text strong>{post.author.name}</Text>
+            {posts.map(post => {
+              // 将新的API返回数据转换为UI显示所需的格式
+              const displayPost = convertPostForDisplay(post);
+              
+              return (
+                <Card 
+                  key={displayPost.id} 
+                  className={styles.postCard}
+                  hoverable
+                  onClick={() => navigate(`/community/post/${displayPost.id}`)}
+                >
+                  <div className={styles.postHeader}>
+                    <div className={styles.postMeta}>
+                      <div className={styles.userInfo}>
+                        <Avatar src={displayPost.author.avatar} />
+                        <Text strong>{displayPost.author.name}</Text>
+                      </div>
+                      <div className={styles.postTime}>{displayPost.date}</div>
                     </div>
-                    <div className={styles.postTime}>{post.date}</div>
+                    <div className={styles.postTitle}>
+                      <Link to={`/community/post/${displayPost.id}`}>{displayPost.title}</Link>
+                    </div>
+                    <div className={styles.postContent}>
+                      <Paragraph ellipsis={{ rows: 2 }}>{displayPost.content}</Paragraph>
+                    </div>
                   </div>
-                  <div className={styles.postTitle}>
-                    <Link to={`/community/post/${post.id}`}>{post.title}</Link>
+                  <div className={styles.postFooter}>
+                    <div className={styles.postTags}>
+                      {displayPost.tags.map((tag: string, index: number) => (
+                        <Tag key={index} color={displayPost.tagColors?.[index] || '#4f46e5'}>{tag}</Tag>
+                      ))}
+                    </div>
+                    <div className={styles.postMeta}>
+                      <span><EyeOutlined /> {displayPost.views}</span>
+                      <span><MessageOutlined /> {displayPost.comments}</span>
+                      <span><LikeOutlined /> {displayPost.likes || 0}</span>
+                    </div>
                   </div>
-                  <div className={styles.postContent}>
-                    <Paragraph ellipsis={{ rows: 2 }}>{post.content}</Paragraph>
-                  </div>
-                </div>
-                <div className={styles.postFooter}>
-                  <div className={styles.postTags}>
-                    {post.tags.map((tag: string, index: number) => (
-                      <Tag key={index} color={post.tagColors?.[index] || '#4f46e5'}>{tag}</Tag>
-                    ))}
-                  </div>
-                  <div className={styles.postMeta}>
-                    <span><EyeOutlined /> {post.views}</span>
-                    <span><MessageOutlined /> {post.comments}</span>
-                    <span><LikeOutlined /> {post.likes || 0}</span>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
 

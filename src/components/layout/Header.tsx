@@ -7,7 +7,8 @@ import {
   DownOutlined, 
   LogoutOutlined, 
   SettingOutlined,
-  BellOutlined
+  BellOutlined,
+  DashboardOutlined
 } from '@ant-design/icons';
 import styles from './Header.module.scss';
 import { useAuth } from '../../hooks/useAuth';
@@ -67,6 +68,11 @@ const Header: React.FC = () => {
     { key: '/community', label: '学习社区' },
   ];
 
+  // 如果是管理员，添加管理后台入口
+  if (user?.userType === 2) {
+    menuItems.push({ key: '/admin', label: '管理后台' });
+  }
+
   // 用户菜单
   const userMenu = (
     <Menu>
@@ -76,6 +82,11 @@ const Header: React.FC = () => {
       <Menu.Item key="settings" icon={<SettingOutlined />}>
         <Link to="/user/settings">账号设置</Link>
       </Menu.Item>
+      {user?.userType === 2 && (
+        <Menu.Item key="admin" icon={<DashboardOutlined />}>
+          <Link to="/admin">管理后台</Link>
+        </Menu.Item>
+      )}
       <Menu.Divider />
       <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
         退出登录

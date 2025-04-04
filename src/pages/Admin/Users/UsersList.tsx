@@ -16,42 +16,36 @@ import {
 } from '@ant-design/icons';
 import AdminLayout from '../../../components/layout/AdminLayout';
 import type { ColumnsType } from 'antd/es/table';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '../../../store/store';
+import * as adminActions from '../../../store/actions/adminActions';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 interface UserType {
-  id: number;
+  userId: number;
   username: string;
   avatar: string;
   email: string;
   phone: string;
-  role: string;
+  userType: number;
   status: number;
-  registerTime: string;
-  lastLoginTime: string;
+  gender?: number;
   major?: string;
-  targetSchool?: string;
-  loginCount: number;
+  target?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// 模拟用户数据
-const mockUsers: UserType[] = Array.from({ length: 100 }).map((_, index) => ({
-  id: index + 1,
-  username: `user${index + 1}`,
-  avatar: `https://api.ytjx.com/static/avatars/${index + 1}.jpg`,
-  email: `user${index + 1}@example.com`,
-  phone: `1380013${String(index + 1).padStart(4, '0')}`,
-  role: ['student', 'teacher', 'admin'][Math.floor(Math.random() * 3)],
-  status: Math.random() > 0.9 ? 2 : 1, // 1-正常，2-禁用
-  registerTime: `2023-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-  lastLoginTime: `2023-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-  major: Math.random() > 0.5 ? ['计算机科学与技术', '软件工程', '人工智能', '数学', '物理学', '英语'][Math.floor(Math.random() * 6)] : undefined,
-  targetSchool: Math.random() > 0.5 ? ['清华大学', '北京大学', '浙江大学', '复旦大学', '上海交通大学'][Math.floor(Math.random() * 5)] : undefined,
-  loginCount: Math.floor(Math.random() * 100),
-}));
+interface ApiResponse {
+  success: boolean;
+  data?: any;
+  message?: string;
+}
 
 const UsersList: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -72,83 +66,48 @@ const UsersList: React.FC = () => {
     fetchUsers();
   }, [pagination.current, pagination.pageSize]);
 
-  // 模拟获取用户数据
+  // 获取用户数据
   const fetchUsers = async () => {
     setLoading(true);
-    // 模拟 API 请求延迟
-    setTimeout(() => {
-      const { current, pageSize } = pagination;
-      const startIndex = (current - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
+    
+    try {
+      const result = await dispatch(adminActions.fetchUserList({
+        page: pagination.current,
+        size: pagination.pageSize,
+        keyword: searchForm.getFieldValue('keyword'),
+        userType: searchForm.getFieldValue('userType'),
+        status: searchForm.getFieldValue('status')
+      }));
       
-      const filteredUsers = [...mockUsers];
-      const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+      // 类型断言，将result视为ApiResponse类型
+      const response = result as unknown as ApiResponse;
       
-      setUsers(paginatedUsers);
-      setPagination({
-        ...pagination,
-        total: filteredUsers.length,
-      });
+      if (response.success && response.data) {
+        setUsers(response.data.records || []);
+        setPagination({
+          ...pagination,
+          total: response.data.total || 0
+        });
+      }
+    } catch (error) {
+      console.error('获取用户列表失败', error);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   // 搜索用户
   const handleSearch = (values: any) => {
-    setLoading(true);
-    console.log('Search values:', values);
-    // 在真实环境中这里应该调用 API 进行搜索
-    setTimeout(() => {
-      let filteredUsers = [...mockUsers];
-      
-      if (values.keyword) {
-        const keyword = values.keyword.toLowerCase();
-        filteredUsers = filteredUsers.filter(user => 
-          user.username.toLowerCase().includes(keyword) || 
-          user.email.toLowerCase().includes(keyword) || 
-          (user.phone && user.phone.includes(keyword))
-        );
-      }
-      
-      if (values.role) {
-        filteredUsers = filteredUsers.filter(user => user.role === values.role);
-      }
-      
-      if (values.status) {
-        filteredUsers = filteredUsers.filter(user => user.status === values.status);
-      }
-      
-      if (values.registerTime && values.registerTime.length === 2) {
-        const startDate = values.registerTime[0].startOf('day').valueOf();
-        const endDate = values.registerTime[1].endOf('day').valueOf();
-        
-        filteredUsers = filteredUsers.filter(user => {
-          const registerDate = new Date(user.registerTime).valueOf();
-          return registerDate >= startDate && registerDate <= endDate;
-        });
-      }
-      
-      const { current, pageSize } = pagination;
-      const startIndex = (current - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-      
-      setUsers(paginatedUsers);
-      setPagination({
-        ...pagination,
-        current: 1,
-        total: filteredUsers.length,
-      });
-      setLoading(false);
-    }, 500);
+    setPagination({ ...pagination, current: 1 });
+    fetchUsers();
   };
 
   // 表格列定义
   const columns: ColumnsType<UserType> = [
     {
       title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'userId',
+      key: 'userId',
       width: 60,
     },
     {
@@ -174,15 +133,15 @@ const UsersList: React.FC = () => {
     },
     {
       title: '角色',
-      dataIndex: 'role',
-      key: 'role',
-      render: (role) => {
+      dataIndex: 'userType',
+      key: 'userType',
+      render: (userType) => {
         let color = 'blue';
         let text = '学生';
-        if (role === 'teacher') {
+        if (userType === 1) {
           color = 'green';
           text = '教师';
-        } else if (role === 'admin') {
+        } else if (userType === 2) {
           color = 'purple';
           text = '管理员';
         }
@@ -194,22 +153,22 @@ const UsersList: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status) => {
-        return status === 1 ? 
+        return status === 0 ? 
           <Tag color="success">正常</Tag> : 
           <Tag color="error">禁用</Tag>;
       },
     },
     {
       title: '注册时间',
-      dataIndex: 'registerTime',
-      key: 'registerTime',
-      sorter: (a, b) => new Date(a.registerTime).getTime() - new Date(b.registerTime).getTime(),
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      sorter: (a, b) => new Date(a.createdAt || '').getTime() - new Date(b.createdAt || '').getTime(),
     },
     {
       title: '最后登录',
-      dataIndex: 'lastLoginTime',
-      key: 'lastLoginTime',
-      sorter: (a, b) => new Date(a.lastLoginTime).getTime() - new Date(b.lastLoginTime).getTime(),
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      sorter: (a, b) => new Date(a.updatedAt || '').getTime() - new Date(b.updatedAt || '').getTime(),
     },
     {
       title: '操作',
@@ -224,13 +183,13 @@ const UsersList: React.FC = () => {
               onClick={() => handleEdit(record)} 
             />
           </Tooltip>
-          {record.status === 1 ? (
+          {record.status === 0 ? (
             <Tooltip title="禁用">
               <Button 
                 type="text" 
                 danger 
                 icon={<LockOutlined />} 
-                onClick={() => showDisableModal(record.id)} 
+                onClick={() => showDisableModal(record.userId)} 
               />
             </Tooltip>
           ) : (
@@ -238,21 +197,21 @@ const UsersList: React.FC = () => {
               <Button 
                 type="text" 
                 icon={<UnlockOutlined />} 
-                onClick={() => handleEnable(record.id)} 
+                onClick={() => handleEnable(record.userId)} 
               />
             </Tooltip>
           )}
           <Dropdown overlay={
             <Menu>
-              <Menu.Item key="1" icon={<ReloadOutlined />} onClick={() => handleResetPassword(record.id)}>
+              <Menu.Item key="1" icon={<ReloadOutlined />} onClick={() => handleResetPassword(record.userId)}>
                 重置密码
               </Menu.Item>
               <Menu.Divider />
-              <Menu.Item key="2" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record.id)}>
-                删除用户
+              <Menu.Item key="2" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record.userId)}>
+                删除
               </Menu.Item>
             </Menu>
-          }>
+          } trigger={['click']}>
             <Button type="text" icon={<MoreOutlined />} />
           </Dropdown>
         </Space>
@@ -260,297 +219,295 @@ const UsersList: React.FC = () => {
     },
   ];
 
-  // 处理表格分页
+  // 表格分页、排序、筛选变化
   const handleTableChange = (pagination: any, filters: any, sorter: any) => {
     setPagination(pagination);
   };
 
-  // 处理编辑用户
+  // 编辑用户
   const handleEdit = (user: UserType) => {
     setCurrentUser(user);
     setVisible(true);
   };
 
-  // 处理禁用用户
+  // 显示禁用用户确认框
   const showDisableModal = (userId: number) => {
     setDisableUserId(userId);
     setDisableModalVisible(true);
   };
 
-  const handleDisable = () => {
+  // 禁用用户
+  const handleDisable = async () => {
     if (!disableUserId) return;
     
     setConfirmLoading(true);
-    // 模拟 API 请求
-    setTimeout(() => {
-      setUsers(prevUsers =>
-        prevUsers.map(user =>
-          user.id === disableUserId ? { ...user, status: 2 } : user
-        )
-      );
+    try {
+      const result = await dispatch(adminActions.updateUserStatus(disableUserId, 1));
+      const response = result as unknown as ApiResponse;
+      
+      if (response.success) {
+        setDisableModalVisible(false);
+        // 刷新用户列表
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('禁用用户失败', error);
+    } finally {
       setConfirmLoading(false);
-      setDisableModalVisible(false);
-      setDisableReason('');
-      setDisableDuration(7);
-      message.success('用户已禁用');
-    }, 1000);
+    }
   };
 
-  // 处理启用用户
-  const handleEnable = (userId: number) => {
-    // 模拟 API 请求
-    setTimeout(() => {
-      setUsers(prevUsers =>
-        prevUsers.map(user =>
-          user.id === userId ? { ...user, status: 1 } : user
-        )
-      );
-      message.success('用户已启用');
-    }, 500);
+  // 启用用户
+  const handleEnable = async (userId: number) => {
+    setLoading(true);
+    try {
+      const result = await dispatch(adminActions.updateUserStatus(userId, 0));
+      const response = result as unknown as ApiResponse;
+      
+      if (response.success) {
+        // 刷新用户列表
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('启用用户失败', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 处理重置密码
+  // 重置密码
   const handleResetPassword = (userId: number) => {
     Modal.confirm({
-      title: '重置密码',
-      content: '确定要重置该用户的密码吗？重置后密码将发送到用户邮箱。',
-      onOk() {
-        // 模拟 API 请求
-        setTimeout(() => {
-          message.success('密码已重置并发送至用户邮箱');
-        }, 1000);
-      },
+      title: '确定要重置该用户的密码吗？',
+      content: '重置后密码将变为默认密码，用户需要重新登录。',
+      onOk: async () => {
+        try {
+          const result = await dispatch(adminActions.resetUserPassword(userId));
+          const response = result as unknown as ApiResponse;
+          
+          if (response.success && response.message) {
+            message.success(response.message);
+          }
+        } catch (error) {
+          console.error('重置密码失败', error);
+        }
+      }
     });
   };
 
-  // 处理删除用户
+  // 删除用户
   const handleDelete = (userId: number) => {
     Modal.confirm({
-      title: '删除用户',
-      content: '确定要删除该用户吗？此操作不可逆。',
-      okText: '删除',
+      title: '确定要删除该用户吗？',
+      content: '删除后用户账号将无法恢复，用户的所有数据将被清除。',
       okType: 'danger',
-      onOk() {
-        // 模拟 API 请求
-        setTimeout(() => {
-          setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-          message.success('用户已删除');
-        }, 1000);
-      },
+      onOk: async () => {
+        try {
+          const result = await dispatch(adminActions.deleteUser(userId));
+          const response = result as unknown as ApiResponse;
+          
+          if (response.success) {
+            fetchUsers();
+          }
+        } catch (error) {
+          console.error('删除用户失败', error);
+        }
+      }
     });
   };
 
-  // 批量导入用户
+  // 导入用户
   const handleImportUsers = () => {
-    message.info('此功能尚未实现');
+    message.info('导入用户功能正在开发中...');
   };
 
-  // 导出用户数据
+  // 导出用户
   const handleExportUsers = () => {
-    message.info('正在导出用户数据...');
-    // 模拟导出
-    setTimeout(() => {
-      message.success('用户数据已导出');
-    }, 1000);
+    message.info('导出用户功能正在开发中...');
   };
 
   return (
     <AdminLayout>
-      <Card title="用户管理" extra={
-        <Space>
-          <Button icon={<PlusOutlined />} type="primary">添加用户</Button>
-          <Button icon={<ImportOutlined />} onClick={handleImportUsers}>批量导入</Button>
-          <Button icon={<ExportOutlined />} onClick={handleExportUsers}>导出数据</Button>
-        </Space>
-      }>
+      <Card 
+        title="用户管理" 
+        extra={
+          <Space>
+            <Button type="primary" icon={<PlusOutlined />}>添加用户</Button>
+            <Button icon={<ImportOutlined />} onClick={handleImportUsers}>导入</Button>
+            <Button icon={<ExportOutlined />} onClick={handleExportUsers}>导出</Button>
+          </Space>
+        }
+      >
         {/* 搜索表单 */}
-        <Form
+        <Form 
           form={searchForm}
           layout="inline"
           onFinish={handleSearch}
-          style={{ marginBottom: 24 }}
+          style={{ marginBottom: 16 }}
         >
-          <Row gutter={[16, 16]} style={{ width: '100%' }}>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="keyword">
-                <Input 
-                  prefix={<SearchOutlined />} 
-                  placeholder="用户名/邮箱/手机号" 
-                  allowClear
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="role">
-                <Select placeholder="选择角色" allowClear>
-                  <Option value="student">学生</Option>
-                  <Option value="teacher">教师</Option>
-                  <Option value="admin">管理员</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="status">
-                <Select placeholder="选择状态" allowClear>
-                  <Option value={1}>正常</Option>
-                  <Option value={2}>禁用</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="registerTime">
-                <RangePicker placeholder={['注册起始日期', '注册结束日期']} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={24} md={24} lg={24} style={{ textAlign: 'right' }}>
-              <Form.Item>
-                <Space>
-                  <Button 
-                    onClick={() => {
-                      searchForm.resetFields();
-                      fetchUsers();
-                    }}
-                  >
-                    重置
-                  </Button>
-                  <Button type="primary" htmlType="submit">
-                    搜索
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item name="keyword">
+            <Input 
+              placeholder="用户名/邮箱/手机号" 
+              prefix={<SearchOutlined />} 
+              allowClear 
+              style={{ width: 200 }}
+            />
+          </Form.Item>
+          <Form.Item name="userType">
+            <Select 
+              placeholder="用户角色" 
+              allowClear
+              style={{ width: 120 }}
+            >
+              <Option value={0}>学生</Option>
+              <Option value={1}>教师</Option>
+              <Option value={2}>管理员</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="status">
+            <Select 
+              placeholder="用户状态" 
+              allowClear
+              style={{ width: 120 }}
+            >
+              <Option value={0}>正常</Option>
+              <Option value={1}>禁用</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">搜索</Button>
+          </Form.Item>
+          <Form.Item>
+            <Button onClick={() => {
+              searchForm.resetFields();
+              handleSearch({});
+            }}>重置</Button>
+          </Form.Item>
         </Form>
 
-        {/* 用户列表表格 */}
-        <Table
+        {/* 用户列表 */}
+        <Table 
+          rowKey="userId"
           columns={columns}
           dataSource={users}
-          rowKey="id"
-          pagination={pagination}
           loading={loading}
+          pagination={pagination}
           onChange={handleTableChange}
-          scroll={{ x: 1100 }}
         />
+      </Card>
 
-        {/* 编辑用户弹窗 */}
-        <Modal
-          title="编辑用户"
-          visible={visible}
-          onCancel={() => setVisible(false)}
-          destroyOnClose
-          footer={null}
-        >
-          {currentUser && (
-            <Form
-              initialValues={{
-                username: currentUser.username,
-                email: currentUser.email,
-                phone: currentUser.phone,
-                role: currentUser.role,
-                status: currentUser.status
-              }}
-              layout="vertical"
-              onFinish={(values) => {
-                console.log('Form values:', values);
-                setVisible(false);
-                message.success('用户信息已更新');
-              }}
-            >
-              <Form.Item 
-                name="username" 
-                label="用户名"
-                rules={[{ required: true, message: '请输入用户名' }]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item 
-                name="email" 
-                label="邮箱"
-                rules={[
-                  { required: true, message: '请输入邮箱' },
-                  { type: 'email', message: '请输入有效的邮箱地址' }
-                ]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item 
-                name="phone" 
-                label="手机号"
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item 
-                name="role" 
-                label="角色"
-                rules={[{ required: true, message: '请选择角色' }]}
-              >
-                <Select>
-                  <Option value="student">学生</Option>
-                  <Option value="teacher">教师</Option>
-                  <Option value="admin">管理员</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item 
-                name="status" 
-                label="状态"
-                rules={[{ required: true, message: '请选择状态' }]}
-              >
-                <Select>
-                  <Option value={1}>正常</Option>
-                  <Option value={2}>禁用</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item>
-                <Space style={{ float: 'right' }}>
-                  <Button onClick={() => setVisible(false)}>取消</Button>
-                  <Button type="primary" htmlType="submit">保存</Button>
-                </Space>
-              </Form.Item>
-            </Form>
-          )}
-        </Modal>
-
-        {/* 禁用用户弹窗 */}
-        <Modal
-          title="禁用用户"
-          visible={disableModalVisible}
-          onOk={handleDisable}
-          onCancel={() => setDisableModalVisible(false)}
-          confirmLoading={confirmLoading}
-          okText="确认禁用"
-          cancelText="取消"
-        >
-          <Form layout="vertical">
-            <Form.Item
-              label="禁用原因"
-              rules={[{ required: true, message: '请输入禁用原因' }]}
-            >
-              <Input.TextArea 
-                rows={4} 
-                placeholder="请输入禁用原因，将通知给用户" 
-                value={disableReason}
-                onChange={(e) => setDisableReason(e.target.value)}
-              />
+      {/* 编辑用户弹窗 */}
+      <Modal
+        title="编辑用户"
+        visible={visible}
+        onCancel={() => setVisible(false)}
+        confirmLoading={confirmLoading}
+        footer={null}
+      >
+        {currentUser && (
+          <Form
+            initialValues={{
+              username: currentUser.username,
+              email: currentUser.email,
+              phone: currentUser.phone,
+              userType: currentUser.userType,
+              status: currentUser.status,
+              gender: currentUser.gender,
+              major: currentUser.major,
+              target: currentUser.target
+            }}
+            onFinish={async (values) => {
+              if (!currentUser) return;
+              
+              setConfirmLoading(true);
+              try {
+                const result = await dispatch(adminActions.updateUser(currentUser.userId, values));
+                const response = result as unknown as ApiResponse;
+                
+                if (response.success) {
+                  setVisible(false);
+                  fetchUsers();
+                }
+              } catch (error) {
+                console.error('更新用户失败', error);
+              } finally {
+                setConfirmLoading(false);
+              }
+            }}
+            layout="vertical"
+          >
+            <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
+              <Input disabled />
             </Form.Item>
-            <Form.Item
-              label="禁用时长"
-              rules={[{ required: true, message: '请选择禁用时长' }]}
-            >
-              <Select 
-                value={disableDuration} 
-                onChange={(value) => setDisableDuration(value)}
-              >
-                <Option value={1}>1天</Option>
-                <Option value={3}>3天</Option>
-                <Option value={7}>7天</Option>
-                <Option value={30}>30天</Option>
-                <Option value={0}>永久</Option>
+            <Form.Item name="email" label="邮箱" rules={[{ type: 'email', message: '请输入有效的邮箱地址' }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="phone" label="手机号">
+              <Input />
+            </Form.Item>
+            <Form.Item name="gender" label="性别">
+              <Select>
+                <Option value={0}>女</Option>
+                <Option value={1}>男</Option>
+                <Option value={2}>其他</Option>
               </Select>
             </Form.Item>
+            <Form.Item name="major" label="专业">
+              <Input />
+            </Form.Item>
+            <Form.Item name="target" label="考研目标">
+              <Input />
+            </Form.Item>
+            <Form.Item name="userType" label="用户角色" rules={[{ required: true, message: '请选择用户角色' }]}>
+              <Select>
+                <Option value={0}>学生</Option>
+                <Option value={1}>教师</Option>
+                <Option value={2}>管理员</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="status" label="用户状态" rules={[{ required: true, message: '请选择用户状态' }]}>
+              <Select>
+                <Option value={0}>正常</Option>
+                <Option value={1}>禁用</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Button block onClick={() => setVisible(false)}>取消</Button>
+                </Col>
+                <Col span={12}>
+                  <Button type="primary" htmlType="submit" block loading={confirmLoading}>保存</Button>
+                </Col>
+              </Row>
+            </Form.Item>
           </Form>
-        </Modal>
-      </Card>
+        )}
+      </Modal>
+
+      {/* 禁用用户弹窗 */}
+      <Modal
+        title="禁用用户"
+        visible={disableModalVisible}
+        onCancel={() => setDisableModalVisible(false)}
+        onOk={handleDisable}
+        confirmLoading={confirmLoading}
+      >
+        <Form layout="vertical">
+          <Form.Item label="禁用原因">
+            <Input.TextArea rows={4} value={disableReason} onChange={e => setDisableReason(e.target.value)} />
+          </Form.Item>
+          <Form.Item label="禁用时长">
+            <Select value={disableDuration} onChange={value => setDisableDuration(value)}>
+              <Option value={1}>1天</Option>
+              <Option value={3}>3天</Option>
+              <Option value={7}>7天</Option>
+              <Option value={30}>30天</Option>
+              <Option value={-1}>永久禁用</Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </AdminLayout>
   );
 };

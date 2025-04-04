@@ -18,7 +18,9 @@ import {
   Typography,
   Badge,
   Tabs,
-  Radio
+  Radio,
+  Upload,
+  Checkbox
 } from 'antd';
 import {
   PlusOutlined,
@@ -29,11 +31,20 @@ import {
   ImportOutlined,
   ExportOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../components/layout/AdminLayout';
 import type { ColumnsType } from 'antd/es/table';
+import { 
+  getQuestionsList, 
+  createQuestion, 
+  updateQuestion, 
+  deleteQuestion,
+  importQuestions,
+  exportQuestions
+} from '../../../api/adminApi';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -42,103 +53,44 @@ const { TabPane } = Tabs;
 
 // 题目类型定义
 interface QuestionOption {
-  id: string;
-  content: string;
-  isCorrect: boolean;
+  optionId: string;
+  optionKey: string;
+  optionValue: string;
+  isCorrect?: boolean;
 }
 
 interface QuestionType {
-  id: number;
-  content: string;
-  type: 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay';
-  difficulty: 'easy' | 'medium' | 'hard';
-  options: QuestionOption[];
-  answer: string;
+  questionId: number;
+  questionText: string;
+  questionType: number;
+  difficultyLevel: number;
+  knowledgePoint: string;
+  correctAnswer: string;
   analysis: string;
-  tags: string[];
+  options?: QuestionOption[];
   createTime: string;
   updateTime: string;
-  source: string;
-  knowPoints: string[];
+  passRate?: number;
+  usageCount?: number;
+  creatorName?: string;
 }
 
-// 题目数据 (模拟)
-const generateMockQuestions = (): QuestionType[] => {
-  // 生成题目数量
-  const count = 80; 
-  return Array.from({ length: count }).map((_, index) => {
-    const qid = index + 1;
-    const type = ['single', 'multiple', 'judge', 'fillBlank', 'essay'][Math.floor(Math.random() * 5)] as 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay';
-    const difficulty = ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)] as 'easy' | 'medium' | 'hard';
-    
-    let options: QuestionOption[] = [];
-    let answer = '';
-    
-    switch (type) {
-      case 'single':
-        options = [
-          { id: 'A', content: `选项A-${qid}`, isCorrect: true },
-          { id: 'B', content: `选项B-${qid}`, isCorrect: false },
-          { id: 'C', content: `选项C-${qid}`, isCorrect: false },
-          { id: 'D', content: `选项D-${qid}`, isCorrect: false }
-        ];
-        answer = 'A';
-        break;
-      case 'multiple':
-        options = [
-          { id: 'A', content: `选项A-${qid}`, isCorrect: true },
-          { id: 'B', content: `选项B-${qid}`, isCorrect: true },
-          { id: 'C', content: `选项C-${qid}`, isCorrect: false },
-          { id: 'D', content: `选项D-${qid}`, isCorrect: false }
-        ];
-        answer = 'A,B';
-        break;
-      case 'judge':
-        options = [
-          { id: 'T', content: '正确', isCorrect: Math.random() > 0.5 },
-          { id: 'F', content: '错误', isCorrect: !options[0]?.isCorrect }
-        ];
-        answer = options[0]?.isCorrect ? 'T' : 'F';
-        break;
-      case 'fillBlank':
-        answer = `答案${qid}`;
-        break;
-      case 'essay':
-        answer = `这是问答题${qid}的标准答案，包含关键点1、关键点2和关键点3。`;
-        break;
-    }
-    
-    return {
-      id: qid,
-      content: `这是第${qid}题。这是一道${difficulty}难度的${type === 'single' ? '单选题' : type === 'multiple' ? '多选题' : type === 'judge' ? '判断题' : type === 'fillBlank' ? '填空题' : '问答题'}`,
-      type,
-      difficulty,
-      options,
-      answer,
-      analysis: `这是第${qid}题的解析，解释了为什么选择${answer}是正确的。`,
-      tags: [`标签${qid}-1`, `标签${qid}-2`],
-      createTime: `2023-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-      updateTime: `2023-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-      source: `来源${Math.floor(Math.random() * 5) + 1}`,
-      knowPoints: [`知识点${qid}-1`, `知识点${qid}-2`]
-    };
-  });
-};
-
 // 题目类型映射
-const questionTypeMap = {
-  single: { text: '单选题', color: 'blue' },
-  multiple: { text: '多选题', color: 'purple' },
-  judge: { text: '判断题', color: 'cyan' },
-  fillBlank: { text: '填空题', color: 'orange' },
-  essay: { text: '问答题', color: 'green' }
+const questionTypeMap: Record<number, { text: string; color: string }> = {
+  0: { text: '单选题', color: 'blue' },
+  1: { text: '多选题', color: 'purple' },
+  2: { text: '填空题', color: 'orange' },
+  3: { text: '判断题', color: 'cyan' },
+  4: { text: '问答题', color: 'green' }
 };
 
 // 难度级别映射
-const difficultyMap = {
-  easy: { text: '简单', color: 'success' },
-  medium: { text: '中等', color: 'warning' },
-  hard: { text: '困难', color: 'error' }
+const difficultyMap: Record<number, { text: string; color: string }> = {
+  0: { text: '简单', color: 'success' },
+  1: { text: '中等', color: 'warning' },
+  2: { text: '困难', color: 'error' },
+  3: { text: '很难', color: 'magenta' },
+  4: { text: '专家', color: 'volcano' }
 };
 
 const QuestionsList: React.FC = () => {
@@ -157,6 +109,9 @@ const QuestionsList: React.FC = () => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [importVisible, setImportVisible] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
 
   // 初始化数据
   useEffect(() => {
@@ -164,66 +119,77 @@ const QuestionsList: React.FC = () => {
   }, [pagination.current, pagination.pageSize]);
 
   // 获取题目列表
-  const fetchQuestions = () => {
+  const fetchQuestions = async (searchParams?: any) => {
     setLoading(true);
-    // 模拟API请求
-    setTimeout(() => {
-      const allQuestions = generateMockQuestions();
-      const { current, pageSize } = pagination;
-      const startIndex = (current - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
+    try {
+      const params = {
+        page: pagination.current,
+        size: pagination.pageSize,
+        ...searchParams
+      };
       
-      const paginatedQuestions = allQuestions.slice(startIndex, endIndex);
-      
-      setQuestions(paginatedQuestions);
-      setPagination({
-        ...pagination,
-        total: allQuestions.length
-      });
+      const result = await getQuestionsList(params);
+      if (result.success) {
+        // 转换后端数据为组件所需格式
+        const data = result.data;
+        const list = data.list || [];
+        
+        const formattedQuestions = list.map((item: any) => ({
+          questionId: item.questionId,
+          questionText: item.questionText,
+          questionType: item.questionType,
+          difficultyLevel: item.difficultyLevel,
+          knowledgePoint: item.knowledgePoint,
+          correctAnswer: item.correctAnswer,
+          analysis: item.analysis,
+          options: item.options || [],
+          createTime: item.createTime,
+          updateTime: item.updateTime,
+          passRate: item.passRate,
+          usageCount: item.usageCount,
+          creatorName: item.creatorName || `用户${item.creatorId}`
+        }));
+        
+        setQuestions(formattedQuestions);
+        setPagination({
+          ...pagination,
+          total: data.total || 0
+        });
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('获取题目列表失败:', error);
+      message.error('获取题目列表失败');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   // 处理搜索
   const handleSearch = (values: any) => {
-    setLoading(true);
-    // 模拟API请求
-    setTimeout(() => {
-      const allQuestions = generateMockQuestions();
-      let filteredQuestions = [...allQuestions];
-      
-      if (values.keyword) {
-        const keyword = values.keyword.toLowerCase();
-        filteredQuestions = filteredQuestions.filter(q => 
-          q.content.toLowerCase().includes(keyword) || 
-          q.analysis.toLowerCase().includes(keyword)
-        );
-      }
-      
-      if (values.type) {
-        filteredQuestions = filteredQuestions.filter(q => q.type === values.type);
-      }
-      
-      if (values.difficulty) {
-        filteredQuestions = filteredQuestions.filter(q => q.difficulty === values.difficulty);
-      }
-      
-      const { pageSize } = pagination;
-      const paginatedQuestions = filteredQuestions.slice(0, pageSize);
-      
-      setQuestions(paginatedQuestions);
-      setPagination({
-        ...pagination,
-        current: 1,
-        total: filteredQuestions.length
-      });
-      setLoading(false);
-    }, 500);
+    const searchParams = {
+      keyword: values.keyword,
+      type: values.type,
+      difficulty: values.difficulty,
+      knowledgePoint: values.knowledgePoint
+    };
+    
+    setPagination({
+      ...pagination,
+      current: 1 // 重置为第一页
+    });
+    
+    fetchQuestions(searchParams);
   };
 
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
+    setPagination({
+      ...pagination,
+      current: 1
+    });
     fetchQuestions();
   };
 
@@ -243,92 +209,216 @@ const QuestionsList: React.FC = () => {
     if (question) {
       // 编辑现有题目
       setSelectedQuestion(question);
+      
+      // 处理选项数据
+      let optionsData: Array<{optionKey: string; optionValue: string; isCorrect: boolean}> = [];
+      if ([0, 1, 3].includes(question.questionType) && question.options) {
+        optionsData = question.options.map(opt => ({
+          optionKey: opt.optionKey,
+          optionValue: opt.optionValue,
+          isCorrect: question.correctAnswer.includes(opt.optionKey)
+        }));
+      }
+      
+      // 知识点转换为数组
+      const knowledgePoints = question.knowledgePoint ? question.knowledgePoint.split(',') : [];
+      
       questionForm.setFieldsValue({
-        content: question.content,
-        type: question.type,
-        difficulty: question.difficulty,
-        options: question.options,
-        answer: question.answer,
+        questionText: question.questionText,
+        questionType: question.questionType,
+        difficultyLevel: question.difficultyLevel,
+        options: optionsData,
+        correctAnswer: question.correctAnswer,
         analysis: question.analysis,
-        tags: question.tags,
-        source: question.source,
-        knowPoints: question.knowPoints
+        knowledgePoint: knowledgePoints
       });
     } else {
       // 添加新题目
       setSelectedQuestion(null);
       questionForm.resetFields();
+      
+      // 默认值设置
+      questionForm.setFieldsValue({
+        questionType: 0,
+        difficultyLevel: 1,
+        options: [
+          { optionKey: 'A', optionValue: '', isCorrect: false },
+          { optionKey: 'B', optionValue: '', isCorrect: false },
+          { optionKey: 'C', optionValue: '', isCorrect: false },
+          { optionKey: 'D', optionValue: '', isCorrect: false }
+        ]
+      });
     }
     setEditVisible(true);
   };
 
   // 保存题目
-  const saveQuestion = () => {
-    questionForm.validateFields().then(values => {
+  const saveQuestion = async () => {
+    try {
+      const values = await questionForm.validateFields();
       setSaveLoading(true);
-      // 模拟API请求
-      setTimeout(() => {
-        if (selectedQuestion) {
-          // 更新题目
-          const updatedQuestion = {
-            ...selectedQuestion,
-            ...values,
-            updateTime: new Date().toISOString().split('T')[0]
-          };
-          setQuestions(prevQuestions => 
-            prevQuestions.map(q => q.id === selectedQuestion.id ? updatedQuestion : q)
-          );
-          message.success('题目已更新');
-        } else {
-          // 添加新题目
-          const newQuestion: QuestionType = {
-            id: Math.max(...questions.map(q => q.id), 0) + 1,
-            ...values,
-            createTime: new Date().toISOString().split('T')[0],
-            updateTime: new Date().toISOString().split('T')[0]
-          };
-          setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
-          message.success('题目已添加');
-        }
+      
+      // 处理选项和正确答案
+      let correctAnswer = values.correctAnswer;
+      let options = undefined;
+      
+      if ([0, 1].includes(values.questionType)) {
+        // 单选题和多选题，从选项中提取正确答案
+        options = values.options.map((opt: any) => ({
+          optionKey: opt.optionKey,
+          optionValue: opt.optionValue
+        }));
+        
+        // 从标记为正确的选项中提取答案
+        correctAnswer = values.options
+          .filter((opt: any) => opt.isCorrect)
+          .map((opt: any) => opt.optionKey)
+          .join(',');
+      } else if (values.questionType === 3) {
+        // 判断题
+        options = [
+          { optionKey: 'T', optionValue: '正确' },
+          { optionKey: 'F', optionValue: '错误' }
+        ];
+      }
+      
+      // 构建API所需的数据格式
+      const questionData = {
+        questionText: values.questionText,
+        questionType: values.questionType,
+        difficultyLevel: values.difficultyLevel,
+        options: options,
+        correctAnswer: correctAnswer,
+        analysis: values.analysis,
+        knowledgePoint: Array.isArray(values.knowledgePoint) ? values.knowledgePoint.join(',') : values.knowledgePoint
+      };
+      
+      let result;
+      if (selectedQuestion) {
+        // 更新题目
+        result = await updateQuestion(selectedQuestion.questionId, questionData);
+      } else {
+        // 添加新题目
+        result = await createQuestion(questionData);
+      }
+      
+      if (result.success) {
+        message.success(result.message);
         setEditVisible(false);
-        setSaveLoading(false);
-      }, 800);
-    });
+        fetchQuestions(); // 刷新列表
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('保存题目失败:', error);
+      message.error('保存题目失败，请检查表单数据');
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   // 删除题目
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     setLoading(true);
-    // 模拟API请求
-    setTimeout(() => {
-      setQuestions(prevQuestions => prevQuestions.filter(q => q.id !== id));
-      message.success('题目已删除');
+    try {
+      const result = await deleteQuestion(id);
+      if (result.success) {
+        message.success(result.message);
+        fetchQuestions(); // 刷新列表
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('删除题目失败:', error);
+      message.error('删除题目失败');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  // 显示导入题目对话框
+  const showImportModal = () => {
+    setImportFile(null);
+    setImportVisible(true);
+  };
+
+  // 处理文件上传
+  const handleFileChange = (info: any) => {
+    if (info.file.status !== 'uploading') {
+      setImportFile(info.file.originFileObj);
+    }
+  };
+
+  // 导入题目
+  const handleImportQuestions = async () => {
+    if (!importFile) {
+      message.warning('请先选择要导入的文件');
+      return;
+    }
+    
+    setImportLoading(true);
+    try {
+      const result = await importQuestions(importFile);
+      if (result.success) {
+        message.success(result.message);
+        setImportVisible(false);
+        fetchQuestions(); // 刷新列表
+      } else {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('导入题目失败:', error);
+      message.error('导入题目失败');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // 导出题目
+  const handleExportQuestions = async () => {
+    try {
+      // 获取当前搜索条件
+      const values = searchForm.getFieldsValue();
+      const params = {
+        type: values.type,
+        difficulty: values.difficulty
+      };
+      
+      message.loading('正在导出题目...', 0);
+      const result = await exportQuestions(params);
+      message.destroy();
+      
+      if (!result.success) {
+        message.error(result.message);
+      }
+    } catch (error) {
+      console.error('导出题目失败:', error);
+      message.error('导出题目失败');
+    }
   };
 
   // 表格列定义
   const columns: ColumnsType<QuestionType> = [
     {
       title: '序号',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'questionId',
+      key: 'questionId',
       width: 60
     },
     {
       title: '题目内容',
-      dataIndex: 'content',
-      key: 'content',
+      dataIndex: 'questionText',
+      key: 'questionText',
       ellipsis: true,
       render: (text, record) => (
         <div>
           <div>{text}</div>
           <Space size={4} style={{ marginTop: 4 }}>
-            <Tag color={questionTypeMap[record.type].color}>
-              {questionTypeMap[record.type].text}
+            <Tag color={questionTypeMap[record.questionType]?.color || 'blue'}>
+              {questionTypeMap[record.questionType]?.text || record.questionType}
             </Tag>
-            <Tag color={difficultyMap[record.difficulty].color}>
-              {difficultyMap[record.difficulty].text}
+            <Tag color={difficultyMap[record.difficultyLevel]?.color || 'blue'}>
+              {difficultyMap[record.difficultyLevel]?.text || record.difficultyLevel}
             </Tag>
           </Space>
         </div>
@@ -336,36 +426,29 @@ const QuestionsList: React.FC = () => {
     },
     {
       title: '答案',
-      dataIndex: 'answer',
-      key: 'answer',
+      dataIndex: 'correctAnswer',
+      key: 'correctAnswer',
       width: 150,
       ellipsis: true
     },
     {
       title: '知识点',
-      dataIndex: 'knowPoints',
-      key: 'knowPoints',
+      dataIndex: 'knowledgePoint',
+      key: 'knowledgePoint',
       width: 150,
-      render: (knowPoints: string[]) => (
+      render: (knowledgePoint: string) => (
         <Space size={[0, 4]} wrap>
-          {knowPoints.map(point => (
+          {knowledgePoint?.split(',').map(point => (
             <Tag key={point}>{point}</Tag>
-          ))}
+          )) || '-'}
         </Space>
       )
     },
     {
-      title: '标签',
-      dataIndex: 'tags',
-      key: 'tags',
-      width: 150,
-      render: (tags: string[]) => (
-        <Space size={[0, 4]} wrap>
-          {tags.map(tag => (
-            <Tag key={tag} color="blue">{tag}</Tag>
-          ))}
-        </Space>
-      )
+      title: '创建者',
+      dataIndex: 'creatorName',
+      key: 'creatorName',
+      width: 100
     },
     {
       title: '更新时间',
@@ -398,7 +481,7 @@ const QuestionsList: React.FC = () => {
           <Tooltip title="删除">
             <Popconfirm
               title="确定要删除此题目吗？"
-              onConfirm={() => handleDelete(record.id)}
+              onConfirm={() => handleDelete(record.questionId)}
               okText="确定"
               cancelText="取消"
             >
@@ -423,46 +506,46 @@ const QuestionsList: React.FC = () => {
       <div>
         <div style={{ marginBottom: 16 }}>
           <Space size={8}>
-            <Tag color={questionTypeMap[selectedQuestion.type].color}>
-              {questionTypeMap[selectedQuestion.type].text}
+            <Tag color={questionTypeMap[selectedQuestion.questionType]?.color || 'blue'}>
+              {questionTypeMap[selectedQuestion.questionType]?.text || selectedQuestion.questionType}
             </Tag>
-            <Tag color={difficultyMap[selectedQuestion.difficulty].color}>
-              {difficultyMap[selectedQuestion.difficulty].text}
+            <Tag color={difficultyMap[selectedQuestion.difficultyLevel]?.color || 'blue'}>
+              {difficultyMap[selectedQuestion.difficultyLevel]?.text || selectedQuestion.difficultyLevel}
             </Tag>
-            {selectedQuestion.tags.map(tag => (
-              <Tag key={tag} color="blue">{tag}</Tag>
-            ))}
           </Space>
         </div>
         
         <div style={{ marginBottom: 16 }}>
           <Typography.Text strong>题目内容：</Typography.Text>
-          <div style={{ marginTop: 8 }}>{selectedQuestion.content}</div>
+          <div style={{ marginTop: 8 }}>{selectedQuestion.questionText}</div>
         </div>
         
-        {['single', 'multiple', 'judge'].includes(selectedQuestion.type) && (
+        {[0, 1, 3].includes(selectedQuestion.questionType) && selectedQuestion.options && (
           <div style={{ marginBottom: 16 }}>
             <Typography.Text strong>选项：</Typography.Text>
             <div style={{ marginTop: 8 }}>
-              {selectedQuestion.options.map(option => (
-                <div key={option.id} style={{ marginBottom: 8 }}>
-                  <Space>
-                    {option.isCorrect ? (
-                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                    ) : (
-                      <CloseCircleOutlined style={{ color: '#f5222d' }} />
-                    )}
-                    <span>{option.id}. {option.content}</span>
-                  </Space>
-                </div>
-              ))}
+              {selectedQuestion.options?.map(option => {
+                const isCorrect = selectedQuestion.correctAnswer.includes(option.optionKey);
+                return (
+                  <div key={option.optionId} style={{ marginBottom: 8 }}>
+                    <Space>
+                      {isCorrect ? (
+                        <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      ) : (
+                        <CloseCircleOutlined style={{ color: '#f5222d' }} />
+                      )}
+                      <span>{option.optionKey}. {option.optionValue}</span>
+                    </Space>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
         
         <div style={{ marginBottom: 16 }}>
           <Typography.Text strong>答案：</Typography.Text>
-          <div style={{ marginTop: 8 }}>{selectedQuestion.answer}</div>
+          <div style={{ marginTop: 8 }}>{selectedQuestion.correctAnswer}</div>
         </div>
         
         <div style={{ marginBottom: 16 }}>
@@ -473,15 +556,20 @@ const QuestionsList: React.FC = () => {
         <div style={{ marginBottom: 16 }}>
           <Typography.Text strong>知识点：</Typography.Text>
           <div style={{ marginTop: 8 }}>
-            {selectedQuestion.knowPoints.map(point => (
+            {selectedQuestion.knowledgePoint?.split(',').map(point => (
               <Tag key={point}>{point}</Tag>
             ))}
           </div>
         </div>
         
+        <div style={{ marginBottom: 16 }}>
+          <Typography.Text strong>使用次数：</Typography.Text>
+          <div style={{ marginTop: 8 }}>{selectedQuestion.usageCount || 0}</div>
+        </div>
+        
         <div>
-          <Typography.Text strong>来源：</Typography.Text>
-          <div style={{ marginTop: 8 }}>{selectedQuestion.source}</div>
+          <Typography.Text strong>创建者：</Typography.Text>
+          <div style={{ marginTop: 8 }}>{selectedQuestion.creatorName || '未知'}</div>
         </div>
       </div>
     );
@@ -496,8 +584,8 @@ const QuestionsList: React.FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => handleAddOrEdit()}>
               添加题目
             </Button>
-            <Button icon={<ImportOutlined />}>批量导入</Button>
-            <Button icon={<ExportOutlined />}>导出题目</Button>
+            <Button icon={<ImportOutlined />} onClick={showImportModal}>批量导入</Button>
+            <Button icon={<ExportOutlined />} onClick={handleExportQuestions}>导出题目</Button>
           </Space>
         }
       >
@@ -521,21 +609,28 @@ const QuestionsList: React.FC = () => {
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="type">
                 <Select placeholder="题目类型" allowClear>
-                  <Option value="single">单选题</Option>
-                  <Option value="multiple">多选题</Option>
-                  <Option value="judge">判断题</Option>
-                  <Option value="fillBlank">填空题</Option>
-                  <Option value="essay">问答题</Option>
+                  <Option value={0}>单选题</Option>
+                  <Option value={1}>多选题</Option>
+                  <Option value={2}>填空题</Option>
+                  <Option value={3}>判断题</Option>
+                  <Option value={4}>问答题</Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="difficulty">
                 <Select placeholder="难度等级" allowClear>
-                  <Option value="easy">简单</Option>
-                  <Option value="medium">中等</Option>
-                  <Option value="hard">困难</Option>
+                  <Option value={0}>简单</Option>
+                  <Option value={1}>中等</Option>
+                  <Option value={2}>困难</Option>
+                  <Option value={3}>很难</Option>
+                  <Option value={4}>专家</Option>
                 </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Form.Item name="knowledgePoint">
+                <Input placeholder="知识点" allowClear />
               </Form.Item>
             </Col>
             <Col xs={24} style={{ textAlign: 'right' }}>
@@ -555,7 +650,7 @@ const QuestionsList: React.FC = () => {
         <Table
           columns={columns}
           dataSource={questions}
-          rowKey="id"
+          rowKey="questionId"
           pagination={pagination}
           loading={loading}
           onChange={handleTableChange}
@@ -564,7 +659,7 @@ const QuestionsList: React.FC = () => {
         {/* 题目预览弹窗 */}
         <Modal
           title="题目预览"
-          visible={previewVisible}
+          open={previewVisible}
           onCancel={() => setPreviewVisible(false)}
           footer={[
             <Button key="back" onClick={() => setPreviewVisible(false)}>关闭</Button>,
@@ -589,7 +684,7 @@ const QuestionsList: React.FC = () => {
         {/* 添加/编辑题目弹窗 */}
         <Modal
           title={selectedQuestion ? "编辑题目" : "添加题目"}
-          visible={editVisible}
+          open={editVisible}
           onCancel={() => setEditVisible(false)}
           onOk={saveQuestion}
           confirmLoading={saveLoading}
@@ -600,68 +695,64 @@ const QuestionsList: React.FC = () => {
             form={questionForm}
             layout="vertical"
             initialValues={{
-              type: 'single',
-              difficulty: 'medium',
+              questionType: 0,
+              difficultyLevel: 1,
               options: [
-                { id: 'A', content: '', isCorrect: false },
-                { id: 'B', content: '', isCorrect: false },
-                { id: 'C', content: '', isCorrect: false },
-                { id: 'D', content: '', isCorrect: false }
+                { optionKey: 'A', optionValue: '', isCorrect: false },
+                { optionKey: 'B', optionValue: '', isCorrect: false },
+                { optionKey: 'C', optionValue: '', isCorrect: false },
+                { optionKey: 'D', optionValue: '', isCorrect: false }
               ]
             }}
           >
             <Tabs defaultActiveKey="basic">
               <TabPane tab="基本信息" key="basic">
                 <Form.Item
-                  name="type"
+                  name="questionType"
                   label="题目类型"
                   rules={[{ required: true, message: '请选择题目类型' }]}
                 >
                   <Select placeholder="请选择题目类型">
-                    <Option value="single">单选题</Option>
-                    <Option value="multiple">多选题</Option>
-                    <Option value="judge">判断题</Option>
-                    <Option value="fillBlank">填空题</Option>
-                    <Option value="essay">问答题</Option>
+                    <Option value={0}>单选题</Option>
+                    <Option value={1}>多选题</Option>
+                    <Option value={2}>填空题</Option>
+                    <Option value={3}>判断题</Option>
+                    <Option value={4}>问答题</Option>
                   </Select>
                 </Form.Item>
                 
                 <Form.Item
-                  name="difficulty"
+                  name="difficultyLevel"
                   label="难度等级"
                   rules={[{ required: true, message: '请选择难度等级' }]}
                 >
                   <Select placeholder="请选择难度等级">
-                    <Option value="easy">简单</Option>
-                    <Option value="medium">中等</Option>
-                    <Option value="hard">困难</Option>
+                    <Option value={0}>简单</Option>
+                    <Option value={1}>中等</Option>
+                    <Option value={2}>困难</Option>
+                    <Option value={3}>很难</Option>
+                    <Option value={4}>专家</Option>
                   </Select>
                 </Form.Item>
                 
                 <Form.Item
-                  name="content"
+                  name="questionText"
                   label="题目内容"
                   rules={[{ required: true, message: '请输入题目内容' }]}
                 >
                   <TextArea rows={4} placeholder="请输入题目内容" />
                 </Form.Item>
-                
-                <Form.Item
-                  name="source"
-                  label="题目来源"
-                >
-                  <Input placeholder="请输入题目来源，如教材、真题等" />
-                </Form.Item>
               </TabPane>
               
               <TabPane tab="选项与答案" key="options">
                 <Form.Item
-                  shouldUpdate={(prevValues, currentValues) => prevValues.type !== currentValues.type}
+                  shouldUpdate={(prevValues, currentValues) => prevValues.questionType !== currentValues.questionType}
                 >
                   {({ getFieldValue }) => {
-                    const type = getFieldValue('type');
+                    const type = getFieldValue('questionType');
                     
-                    if (type === 'single' || type === 'multiple') {
+                    if (type === 0 || type === 1) {
+                      // 单选题或多选题
                       return (
                         <Form.List name="options">
                           {(fields) => (
@@ -671,7 +762,7 @@ const QuestionsList: React.FC = () => {
                                   <Col span={4}>
                                     <Form.Item
                                       {...field}
-                                      name={[field.name, 'id']}
+                                      name={[field.name, 'optionKey']}
                                       noStyle
                                     >
                                       <Input disabled />
@@ -680,7 +771,7 @@ const QuestionsList: React.FC = () => {
                                   <Col span={16}>
                                     <Form.Item
                                       {...field}
-                                      name={[field.name, 'content']}
+                                      name={[field.name, 'optionValue']}
                                       rules={[{ required: true, message: '请输入选项内容' }]}
                                       noStyle
                                     >
@@ -694,9 +785,15 @@ const QuestionsList: React.FC = () => {
                                       valuePropName="checked"
                                       noStyle
                                     >
-                                      <Radio checked={false}>
-                                        正确选项
-                                      </Radio>
+                                      {type === 0 ? (
+                                        <Radio checked={false}>
+                                          正确选项
+                                        </Radio>
+                                      ) : (
+                                        <Checkbox>
+                                          正确选项
+                                        </Checkbox>
+                                      )}
                                     </Form.Item>
                                   </Col>
                                 </Row>
@@ -707,9 +804,9 @@ const QuestionsList: React.FC = () => {
                       );
                     }
                     
-                    if (type === 'judge') {
+                    if (type === 3) {
                       return (
-                        <Form.Item name="answer" label="答案" rules={[{ required: true }]}>
+                        <Form.Item name="correctAnswer" label="答案" rules={[{ required: true }]}>
                           <Radio.Group>
                             <Radio value="T">正确</Radio>
                             <Radio value="F">错误</Radio>
@@ -719,7 +816,7 @@ const QuestionsList: React.FC = () => {
                     }
                     
                     return (
-                      <Form.Item name="answer" label="答案" rules={[{ required: true }]}>
+                      <Form.Item name="correctAnswer" label="答案" rules={[{ required: true }]}>
                         <TextArea rows={4} placeholder="请输入答案" />
                       </Form.Item>
                     );
@@ -731,19 +828,53 @@ const QuestionsList: React.FC = () => {
                 </Form.Item>
               </TabPane>
               
-              <TabPane tab="标签与知识点" key="tags">
-                <Form.Item name="knowPoints" label="知识点">
+              <TabPane tab="知识点" key="knowledgePoint">
+                <Form.Item name="knowledgePoint" label="知识点">
                   <Select mode="tags" placeholder="请输入知识点，回车键添加">
-                  </Select>
-                </Form.Item>
-                
-                <Form.Item name="tags" label="标签">
-                  <Select mode="tags" placeholder="请输入标签，回车键添加">
                   </Select>
                 </Form.Item>
               </TabPane>
             </Tabs>
           </Form>
+        </Modal>
+        
+        {/* 导入题目弹窗 */}
+        <Modal
+          title="批量导入题目"
+          open={importVisible}
+          onCancel={() => setImportVisible(false)}
+          footer={[
+            <Button key="back" onClick={() => setImportVisible(false)}>取消</Button>,
+            <Button
+              key="import"
+              type="primary"
+              loading={importLoading}
+              onClick={handleImportQuestions}
+            >
+              开始导入
+            </Button>
+          ]}
+        >
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <Upload
+              name="file"
+              beforeUpload={() => false}
+              onChange={handleFileChange}
+              fileList={importFile ? [{ uid: '1', name: importFile.name, status: 'done' }] : []}
+              accept=".xlsx,.xls,.csv"
+            >
+              <Button icon={<UploadOutlined />}>选择文件</Button>
+            </Upload>
+            <div style={{ marginTop: 16 }}>
+              <Typography.Text type="secondary">
+                支持 Excel (.xlsx, .xls) 或 CSV 格式文件，文件大小不超过5MB
+              </Typography.Text>
+              <br />
+              <Typography.Link href="#" target="_blank">
+                下载导入模板
+              </Typography.Link>
+            </div>
+          </div>
         </Modal>
       </Card>
     </AdminLayout>

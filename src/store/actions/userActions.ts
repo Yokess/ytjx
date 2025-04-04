@@ -30,8 +30,17 @@ export const fetchUserInfo = (userId: string): AppThunk => async (dispatch) => {
         gender: response.data.gender,
         major: response.data.major,
         target: response.data.target,
-        role: response.data.role || 'user'
+        role: response.data.role || 'user',
+        userType: response.data.userType
       };
+      
+      // 如果有用户类型，保存到localStorage
+      if (response.data.userType !== undefined) {
+        const userType = Number(response.data.userType);
+        localStorage.setItem('userType', userType.toString());
+        console.log('在fetchUserInfo中更新userType到localStorage:', userType);
+        console.log('用户角色:', userType === 0 ? '学生' : userType === 1 ? '教师' : userType === 2 ? '管理员' : '未知');
+      }
       
       // 更新Redux中的用户信息
       dispatch(updateUserInfoAction(userData));

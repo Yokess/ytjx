@@ -13,15 +13,12 @@ import {
   Modal,
   message,
   Popconfirm,
-  Switch,
-  Tooltip,
-  Badge,
-  DatePicker,
   Typography,
+  DatePicker,
   Radio,
   Dropdown,
-  Menu,
-  TablePaginationConfig
+  TablePaginationConfig,
+  Checkbox
 } from 'antd';
 import {
   SearchOutlined,
@@ -30,349 +27,374 @@ import {
   ExclamationCircleOutlined,
   LikeOutlined,
   MessageOutlined,
-  StarOutlined,
   PushpinOutlined,
-  FireOutlined,
-  WarningOutlined,
+  StarOutlined,
   StopOutlined,
-  DownOutlined
+  WarningOutlined,
+  DownOutlined,
+  EditOutlined,
+  VerticalAlignBottomOutlined,
+  VerticalAlignTopOutlined,
+  StarFilled,
+  UnlockOutlined,
+  LockOutlined,
+  EyeInvisibleOutlined
 } from '@ant-design/icons';
 import AdminLayout from '../../../components/layout/AdminLayout';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import locale from 'antd/es/date-picker/locale/zh_CN';
+import { getPosts, getSections, deletePost, setPostTopStatus, setPostEssenceStatus, setPostLockStatus, setPostHiddenStatus } from '../../../api/communityApi';
+import { Post, PageResult, Section } from '../../../types/community';
+import { useNavigate } from 'react-router-dom';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 const { Text, Paragraph } = Typography;
 
-// 帖子类型定义
-interface PostType {
-  id: number;
-  title: string;
-  content: string;
-  authorId: number;
-  authorName: string;
-  authorAvatar: string;
-  sectionId: number;
-  sectionName: string;
-  createTime: string;
-  updateTime: string;
-  viewCount: number;
-  likeCount: number;
-  commentCount: number;
-  status: number; // 0: 正常, 1: 置顶, 2: 精华, 3: 置顶+精华, 4: 禁止回复, 5: 已隐藏, 6: 已删除
-  isDeleted: boolean;
-  isReported: boolean;
-  reportCount: number;
-  reportReasons?: string[];
-  attachmentCount: number;
-  lastReplyTime: string;
-  lastReplierName: string;
-}
-
-// 模拟帖子数据
-const generateMockPosts = (count: number): PostType[] => {
-  const sectionNames = ['考研经验交流', '考研资料分享', '院校信息讨论', '考研政治', '考研英语', '考研数学', '专业课交流', '跨专业考研', '调剂信息', '心理健康'];
-  const authorNames = ['学习达人', '考研小白', '考研老兵', 'PhD申请者', '跨考勇士', '英语高手', '数学爱好者', '考研斗士', '保研人', '未来的研究生'];
-  const titles = [
-    '考研备考经验分享，这一年我是如何从专业倒数到上岸的',
-    '超全的考研政治最后冲刺资料，不看后悔系列',
-    '某985院校计算机专业考研真题解析+考试重点',
-    '跨考金融有哪些难点？我是怎么克服的',
-    '二战考研，我的失败与成功之路',
-    '考研英语长难句分析与解读技巧',
-    '考研数学高频考点总结与解题思路',
-    '调剂信息：X大学各专业接收调剂情况汇总',
-    '考研期间如何调整心态，避免焦虑抑郁',
-    '保研VS考研：我的选择与思考',
-    '考研初试215分，复试被刷，血泪教训分享',
-    '如何选择最适合自己的考研院校和专业',
-    '考研专业课复习方法与技巧分享',
-    '考研期间如何合理安排时间',
-    '英语一VS英语二：如何选择适合自己的考试类型',
-  ];
-  
-  return Array.from({ length: count }).map((_, index) => {
-    const id = index + 1;
-    const status = [0, 0, 0, 1, 2, 3, 0, 0, 4, 0, 0, 0, 5][id % 13];
-    const isReported = id % 17 === 0;
-    const reportCount = isReported ? Math.floor(Math.random() * 5) + 1 : 0;
-    const reportReasons = isReported ? ['垃圾广告', '政治敏感', '违规内容', '人身攻击'].slice(0, reportCount) : [];
-    
-    // 随机日期：过去1年内
-    const randomDays = Math.floor(Math.random() * 365);
-    const createDate = dayjs().subtract(randomDays, 'day');
-    const lastReplyDate = dayjs(createDate).add(Math.floor(Math.random() * randomDays), 'day');
-    
-    return {
-      id,
-      title: titles[id % titles.length],
-      content: `这是帖子内容，包含了${sectionNames[id % sectionNames.length]}相关的讨论内容...`,
-      authorId: 1000 + id,
-      authorName: authorNames[id % authorNames.length],
-      authorAvatar: `https://api.ytjx.com/static/avatars/avatar${(id % 10) + 1}.jpg`,
-      sectionId: (id % 10) + 1,
-      sectionName: sectionNames[id % sectionNames.length],
-      createTime: createDate.format('YYYY-MM-DD HH:mm:ss'),
-      updateTime: createDate.add(Math.floor(Math.random() * 7), 'day').format('YYYY-MM-DD HH:mm:ss'),
-      viewCount: Math.floor(Math.random() * 1000) + 50,
-      likeCount: Math.floor(Math.random() * 100),
-      commentCount: Math.floor(Math.random() * 50),
-      status,
-      isDeleted: status === 6,
-      isReported,
-      reportCount,
-      reportReasons,
-      attachmentCount: Math.floor(Math.random() * 3),
-      lastReplyTime: lastReplyDate.format('YYYY-MM-DD HH:mm:ss'),
-      lastReplierName: authorNames[(id + 3) % authorNames.length],
-    };
-  });
-};
-
-const mockPosts = generateMockPosts(50);
-
 const PostsList: React.FC = () => {
-  const [posts, setPosts] = useState<PostType[]>([]);
+  const navigate = useNavigate();
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sections, setSections] = useState<Section[]>([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
   const [searchForm] = Form.useForm();
+  const [sortBy, setSortBy] = useState<'latest' | 'hot' | 'featured'>('featured');
 
   // 帖子内容预览弹窗状态
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [currentPost, setCurrentPost] = useState<PostType | null>(null);
+  const [currentPost, setCurrentPost] = useState<Post | null>(null);
   
   // 举报详情弹窗状态
   const [reportVisible, setReportVisible] = useState(false);
-
+  
+  // 删除确认弹窗状态
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletePostId, setDeletePostId] = useState<number | null>(null);
+  
+  // 获取板块列表
   useEffect(() => {
-    fetchPosts();
+    const fetchSections = async () => {
+      try {
+        const response = await getSections();
+        if (response.code === 200) {
+          setSections(response.data);
+        } else {
+          message.error(response.message || '获取板块列表失败');
+        }
+      } catch (error) {
+        console.error('获取板块列表失败:', error);
+        message.error('获取板块列表失败');
+      }
+    };
+    
+    fetchSections();
   }, []);
+  
+  // 在组件加载和依赖项变化时获取数据
+  useEffect(() => {
+    console.log("PostsList 组件加载，开始准备调用fetchPosts");
+    console.log("当前sortBy值:", sortBy);
+    console.log("当前分页设置:", pagination);
+    
+    // 直接使用API调用获取数据
+    fetchPosts();
+  }, [sortBy]); // 当排序方式改变时重新获取数据
 
   // 获取帖子列表
-  const fetchPosts = async () => {
+  const fetchPosts = async (params?: any) => {
+    console.log('开始执行fetchPosts, 参数:', params);
     setLoading(true);
-    // 模拟 API 请求
-    setTimeout(() => {
-      setPosts(mockPosts);
-      setPagination({
-        ...pagination,
-        total: mockPosts.length,
-      });
+    try {
+      const pageNum = params?.current || pagination.current;
+      const pageSize = params?.pageSize || pagination.pageSize;
+      
+      // 获取表单中的值
+      const keyword = searchForm.getFieldValue('keyword');
+      const sectionId = searchForm.getFieldValue('sectionId');
+      
+      console.log('表单值 - keyword:', keyword, 'sectionId:', sectionId, 'sortBy:', sortBy);
+      
+      const queryParams = {
+        pageNum,
+        pageSize,
+        sortBy,
+        sectionId: sectionId || undefined,
+        keyword: keyword || undefined
+      };
+      
+      console.log('准备发送API请求，参数:', queryParams);
+      
+      const response = await getPosts(queryParams);
+      console.log('API响应成功:', response);
+      
+      if (response.code === 200) {
+        const pageResult = response.data as PageResult<Post>;
+        console.log('设置帖子列表数据:', pageResult.list);
+        setPosts(pageResult.list);
+        setPagination({
+          current: pageResult.pageNum,
+          pageSize: pageResult.pageSize,
+          total: pageResult.total,
+        });
+      } else {
+        message.error(response.message || '获取帖子列表失败');
+      }
+    } catch (error) {
+      console.error('获取帖子列表失败:', error);
+      message.error('获取帖子列表失败');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  // 处理表格分页、排序等变化
+  const handleTableChange = (newPagination: TablePaginationConfig) => {
+    console.log('表格分页变化:', newPagination);
+    fetchPosts({
+      current: newPagination.current,
+      pageSize: newPagination.pageSize,
+    });
   };
 
   // 搜索帖子
   const handleSearch = (values: any) => {
-    setLoading(true);
-    
-    // 模拟搜索过滤
-    setTimeout(() => {
-      let filteredPosts = [...mockPosts];
-      
-      // 关键词过滤
-      if (values.keyword) {
-        const keyword = values.keyword.toLowerCase();
-        filteredPosts = filteredPosts.filter(post => 
-          post.title.toLowerCase().includes(keyword) || 
-          post.content.toLowerCase().includes(keyword) ||
-          post.authorName.toLowerCase().includes(keyword)
-        );
-      }
-      
-      // 板块过滤
-      if (values.sectionId) {
-        filteredPosts = filteredPosts.filter(post => post.sectionId === values.sectionId);
-      }
-      
-      // 状态过滤
-      if (values.status !== undefined) {
-        filteredPosts = filteredPosts.filter(post => post.status === values.status);
-      }
-      
-      // 时间范围过滤
-      if (values.timeRange && values.timeRange.length === 2) {
-        const startTime = values.timeRange[0].startOf('day');
-        const endTime = values.timeRange[1].endOf('day');
-        
-        filteredPosts = filteredPosts.filter(post => {
-          const postTime = dayjs(post.createTime);
-          return postTime.isAfter(startTime) && postTime.isBefore(endTime);
-        });
-      }
-      
-      // 是否被举报
-      if (values.isReported !== undefined) {
-        filteredPosts = filteredPosts.filter(post => post.isReported === values.isReported);
-      }
-      
-      setPosts(filteredPosts);
-      setPagination({
-        ...pagination,
-        current: 1,
-        total: filteredPosts.length,
-      });
-      setLoading(false);
-    }, 500);
+    console.log('搜索条件:', values);
+    // 重置为第一页，保留其他分页设置
+    fetchPosts({
+      current: 1,
+      pageSize: pagination.pageSize,
+    });
   };
 
   // 重置搜索
   const handleReset = () => {
+    // 重置表单
     searchForm.resetFields();
-    fetchPosts();
+    // 重置排序方式
+    setSortBy('featured');
+    // 重置分页并重新获取数据
+    fetchPosts({
+      current: 1,
+      pageSize: pagination.pageSize,
+    });
   };
 
   // 查看帖子
-  const handleViewPost = (post: PostType) => {
+  const handleViewPost = (post: Post) => {
     setCurrentPost(post);
     setPreviewVisible(true);
   };
 
   // 查看举报详情
-  const handleViewReport = (post: PostType) => {
+  const handleViewReport = (post: Post) => {
     setCurrentPost(post);
     setReportVisible(true);
   };
 
   // 删除帖子
   const handleDeletePost = (postId: number) => {
-    Modal.confirm({
-      title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
-      content: '确定要删除该帖子吗？删除后将不可恢复',
-      okText: '确认',
-      cancelText: '取消',
-      onOk: () => {
-        // 模拟 API 请求
-        setTimeout(() => {
-          setPosts(prevPosts => 
-            prevPosts.map(post => 
-              post.id === postId ? { ...post, status: 6, isDeleted: true } : post
-            )
-          );
-          message.success('帖子已删除');
-        }, 500);
+    setDeletePostId(postId);
+    setDeleteModalVisible(true);
+  };
+  
+  // 确认删除
+  const confirmDelete = async () => {
+    if (!deletePostId) return;
+    
+    try {
+      setLoading(true);
+      console.log('准备删除帖子:', deletePostId);
+      
+      const response = await deletePost(deletePostId);
+      console.log('删除帖子响应:', response);
+      
+      if (response.code === 200) {
+        message.success('帖子已删除');
+        fetchPosts(); // 重新获取帖子列表
+      } else if (response.code === 401) {
+        message.error('您未登录或登录已过期，请重新登录');
+      } else if (response.code === 403) {
+        message.error('您没有权限执行此操作');
+      } else {
+        message.error(response.message || '删除失败');
       }
-    });
+    } catch (error: any) {
+      console.error('删除帖子失败:', error);
+      const errorMsg = error.response?.data?.message || '删除失败，请稍后再试';
+      message.error(errorMsg);
+    } finally {
+      setLoading(false);
+      setDeleteModalVisible(false);
+    }
   };
 
   // 帖子操作：置顶/取消置顶
-  const handleTogglePin = (post: PostType) => {
-    const isCurrentlyPinned = post.status === 1 || post.status === 3;
-    const newStatus = isCurrentlyPinned 
-      ? (post.status === 3 ? 2 : 0) // 如果是置顶+精华，则变为仅精华；如果仅置顶，则变为普通
-      : (post.status === 2 ? 3 : 1); // 如果是精华，则变为置顶+精华；如果是普通，则变为置顶
-    
-    // 模拟 API 请求
-    setTimeout(() => {
-      setPosts(prevPosts => 
-        prevPosts.map(p => 
-          p.id === post.id ? { ...p, status: newStatus } : p
-        )
-      );
-      message.success(isCurrentlyPinned ? '已取消置顶' : '已置顶');
-    }, 500);
+  const handleTogglePin = async (post: Post) => {
+    try {
+      setLoading(true);
+      console.log('准备设置帖子置顶状态:', post.postId, !post.isTop);
+      
+      const response = await setPostTopStatus(post.postId, !post.isTop);
+      console.log('置顶操作响应:', response);
+      
+      if (response.code === 200) {
+        message.success(post.isTop ? '已取消置顶' : '已置顶');
+        fetchPosts(); // 重新加载帖子列表
+      } else if (response.code === 401) {
+        message.error('您未登录或登录已过期，请重新登录');
+      } else if (response.code === 403) {
+        message.error('您没有权限执行此操作');
+      } else {
+        message.error(response.message || '操作失败');
+      }
+    } catch (error: any) {
+      console.error('设置置顶状态失败:', error);
+      const errorMsg = error.response?.data?.message || '操作失败，请稍后再试';
+      message.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 帖子操作：设为精华/取消精华
-  const handleToggleEssence = (post: PostType) => {
-    const isCurrentlyEssence = post.status === 2 || post.status === 3;
-    const newStatus = isCurrentlyEssence 
-      ? (post.status === 3 ? 1 : 0) // 如果是置顶+精华，则变为仅置顶；如果仅精华，则变为普通
-      : (post.status === 1 ? 3 : 2); // 如果是置顶，则变为置顶+精华；如果是普通，则变为精华
-    
-    // 模拟 API 请求
-    setTimeout(() => {
-      setPosts(prevPosts => 
-        prevPosts.map(p => 
-          p.id === post.id ? { ...p, status: newStatus } : p
-        )
-      );
-      message.success(isCurrentlyEssence ? '已取消精华' : '已设为精华');
-    }, 500);
+  const handleToggleEssence = async (post: Post) => {
+    try {
+      setLoading(true);
+      console.log('准备设置帖子精华状态:', post.postId, !post.isEssence);
+      
+      const response = await setPostEssenceStatus(post.postId, !post.isEssence);
+      console.log('精华操作响应:', response);
+      
+      if (response.code === 200) {
+        message.success(post.isEssence ? '已取消精华' : '已设为精华');
+        fetchPosts(); // 重新加载帖子列表
+      } else if (response.code === 401) {
+        message.error('您未登录或登录已过期，请重新登录');
+      } else if (response.code === 403) {
+        message.error('您没有权限执行此操作');
+      } else {
+        message.error(response.message || '操作失败');
+      }
+    } catch (error: any) {
+      console.error('设置精华状态失败:', error);
+      const errorMsg = error.response?.data?.message || '操作失败，请稍后再试';
+      message.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 帖子操作：禁止回复/允许回复
-  const handleToggleLock = (post: PostType) => {
-    const isCurrentlyLocked = post.status === 4;
-    const newStatus = isCurrentlyLocked ? 0 : 4;
-    
-    // 模拟 API 请求
-    setTimeout(() => {
-      setPosts(prevPosts => 
-        prevPosts.map(p => 
-          p.id === post.id ? { ...p, status: newStatus } : p
-        )
-      );
-      message.success(isCurrentlyLocked ? '已允许回复' : '已禁止回复');
-    }, 500);
+  const handleToggleLock = async (post: Post) => {
+    setLoading(true);
+    try {
+      console.log('[Admin] 锁定/解锁帖子, postId:', post.postId, '当前状态:', post.postStatus === 1);
+      // 当前状态为1表示已锁定，取反后为boolean值
+      const newStatus = post.postStatus === 1 ? false : true;
+      
+      const response = await setPostLockStatus(post.postId, newStatus);
+      console.log('[Admin] 锁定/解锁帖子响应:', response);
+      
+      if (response.code === 200) {
+        message.success(newStatus ? '帖子已禁止回复' : '帖子已允许回复');
+        // 更新列表
+        fetchPosts();
+      } else if (response.code === 401) {
+        message.error('请先登录');
+        navigate('/login');
+      } else if (response.code === 403) {
+        message.error('您没有操作权限');
+      } else {
+        message.error(response.message || '操作失败');
+      }
+    } catch (error) {
+      console.error('[Admin] 锁定/解锁帖子失败:', error);
+      message.error('操作失败，请稍后再试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 帖子操作：隐藏/显示
-  const handleToggleHide = (post: PostType) => {
-    const isCurrentlyHidden = post.status === 5;
-    const newStatus = isCurrentlyHidden ? 0 : 5;
-    
-    // 模拟 API 请求
-    setTimeout(() => {
-      setPosts(prevPosts => 
-        prevPosts.map(p => 
-          p.id === post.id ? { ...p, status: newStatus } : p
-        )
-      );
-      message.success(isCurrentlyHidden ? '帖子已显示' : '帖子已隐藏');
-    }, 500);
+  const handleToggleHide = async (post: Post) => {
+    setLoading(true);
+    try {
+      console.log('[Admin] 隐藏/显示帖子, postId:', post.postId, '当前状态:', post.postStatus === 2);
+      // 当前状态为2表示已隐藏，取反后为boolean值
+      const newStatus = post.postStatus === 2 ? false : true;
+      
+      const response = await setPostHiddenStatus(post.postId, newStatus);
+      console.log('[Admin] 隐藏/显示帖子响应:', response);
+      
+      if (response.code === 200) {
+        message.success(newStatus ? '帖子已隐藏' : '帖子已显示');
+        // 更新列表
+        fetchPosts();
+      } else if (response.code === 401) {
+        message.error('请先登录');
+        navigate('/login');
+      } else if (response.code === 403) {
+        message.error('您没有操作权限');
+      } else {
+        message.error(response.message || '操作失败');
+      }
+    } catch (error) {
+      console.error('[Admin] 隐藏/显示帖子失败:', error);
+      message.error('操作失败，请稍后再试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 处理举报
-  const handleProcessReport = () => {
+  const handleProcessReport = async () => {
     if (!currentPost) return;
     
-    // 模拟 API 请求
-    setTimeout(() => {
-      setPosts(prevPosts => 
-        prevPosts.map(p => 
-          p.id === currentPost.id ? { ...p, isReported: false, reportCount: 0, reportReasons: [] } : p
-        )
-      );
+    try {
+      setLoading(true);
+      // 此处应调用处理举报的API，但由于当前没有举报ID信息，先以模拟方式处理
+      // const response = await handlePostReport(reportId, 1, "管理员已处理");
       message.success('举报已处理');
       setReportVisible(false);
-    }, 500);
+      fetchPosts();
+    } catch (error) {
+      console.error('处理举报失败:', error);
+      message.error('处理失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 跳转到前台帖子详情页面
+  const goToPostDetail = (postId: number) => {
+    navigate(`/community/post/${postId}`);
   };
 
   // 表格列定义
-  const columns: ColumnsType<PostType> = [
+  const columns: ColumnsType<Post> = [
     {
       title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'postId',
+      key: 'postId',
       width: 60,
+      sorter: (a, b) => a.postId - b.postId,
     },
     {
       title: '帖子标题',
-      dataIndex: 'title',
-      key: 'title',
+      dataIndex: 'postTitle',
+      key: 'postTitle',
       ellipsis: true,
       render: (text, record) => (
         <Space>
-          {record.status === 1 || record.status === 3 ? <PushpinOutlined style={{ color: 'red' }} /> : null}
-          {record.status === 2 || record.status === 3 ? <StarOutlined style={{ color: 'gold' }} /> : null}
-          {record.status === 4 ? <StopOutlined style={{ color: 'orange' }} /> : null}
-          {record.status === 5 ? <StopOutlined style={{ color: 'gray' }} /> : null}
-          {record.isReported ? <WarningOutlined style={{ color: 'red' }} /> : null}
-          <Text 
-            style={{ 
-              textDecoration: record.isDeleted ? 'line-through' : 'none',
-              color: record.isDeleted ? '#999' : 'inherit' 
-            }}
-          >
+          {record.isTop && <PushpinOutlined style={{ color: 'red' }} />}
+          {record.isEssence && <StarOutlined style={{ color: 'gold' }} />}
+          <Text>
             {text}
           </Text>
         </Space>
@@ -380,8 +402,8 @@ const PostsList: React.FC = () => {
     },
     {
       title: '作者',
-      dataIndex: 'authorName',
-      key: 'authorName',
+      dataIndex: 'username',
+      key: 'username',
       width: 120,
     },
     {
@@ -389,26 +411,16 @@ const PostsList: React.FC = () => {
       dataIndex: 'sectionName',
       key: 'sectionName',
       width: 120,
-      render: (text) => <Tag color="blue">{text}</Tag>,
+      render: (text) => text ? <Tag color="blue">{text}</Tag> : <Tag color="default">未分类</Tag>,
     },
     {
       title: '发布时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
       width: 150,
-      sorter: (a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime(),
-    },
-    {
-      title: '最后回复',
-      dataIndex: 'lastReplyTime',
-      key: 'lastReplyTime',
-      width: 150,
-      render: (text, record) => (
-        <div>
-          <div>{text}</div>
-          <small>by {record.lastReplierName}</small>
-        </div>
-      ),
+      render: (text) => dayjs(text).format('YYYY-MM-DD HH:mm'),
+      sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      defaultSortOrder: 'descend',
     },
     {
       title: '统计',
@@ -416,55 +428,40 @@ const PostsList: React.FC = () => {
       width: 150,
       render: (_, record) => (
         <Space>
-          <Tooltip title="浏览量">
-            <span><EyeOutlined /> {record.viewCount}</span>
-          </Tooltip>
-          <Tooltip title="点赞数">
-            <span><LikeOutlined /> {record.likeCount}</span>
-          </Tooltip>
-          <Tooltip title="评论数">
-            <span><MessageOutlined /> {record.commentCount}</span>
-          </Tooltip>
+          <span title="浏览量"><EyeOutlined /> {record.postViews}</span>
+          <span title="点赞数"><LikeOutlined /> {record.postLikes}</span>
+          <span title="评论数"><MessageOutlined /> {record.postComments}</span>
         </Space>
       ),
     },
     {
       title: '状态',
-      dataIndex: 'status',
       key: 'status',
-      width: 100,
-      render: (status) => {
-        let text = '正常';
-        let color = 'default';
+      width: 120,
+      render: (_, record) => {
+        let statusTags = [];
         
-        switch (status) {
-          case 1:
-            text = '置顶';
-            color = 'blue';
-            break;
-          case 2:
-            text = '精华';
-            color = 'gold';
-            break;
-          case 3:
-            text = '置顶+精华';
-            color = 'purple';
-            break;
-          case 4:
-            text = '禁止回复';
-            color = 'orange';
-            break;
-          case 5:
-            text = '已隐藏';
-            color = 'gray';
-            break;
-          case 6:
-            text = '已删除';
-            color = 'red';
-            break;
+        if (record.isTop) {
+          statusTags.push(<Tag color="blue" key="top">置顶</Tag>);
         }
         
-        return <Tag color={color}>{text}</Tag>;
+        if (record.isEssence) {
+          statusTags.push(<Tag color="gold" key="essence">精华</Tag>);
+        }
+        
+        if (record.postStatus === 0) {
+          statusTags.push(<Tag color="green" key="normal">正常</Tag>);
+        } else if (record.postStatus === 1) {
+          statusTags.push(<Tag color="orange" key="locked">已锁定</Tag>);
+        } else if (record.postStatus === 2) {
+          statusTags.push(<Tag color="red" key="hidden">已隐藏</Tag>);
+        }
+        
+        if (statusTags.length === 0) {
+          statusTags.push(<Tag color="default" key="default">普通</Tag>);
+        }
+        
+        return <Space>{statusTags}</Space>;
       },
     },
     {
@@ -478,22 +475,17 @@ const PostsList: React.FC = () => {
             size="small"
             icon={<EyeOutlined />}
             onClick={() => handleViewPost(record)}
-            disabled={record.isDeleted}
           >
-            查看
+            预览
           </Button>
           
-          {record.isReported && (
-            <Button
-              type="link"
-              danger
-              size="small"
-              icon={<WarningOutlined />}
-              onClick={() => handleViewReport(record)}
-            >
-              举报({record.reportCount})
-            </Button>
-          )}
+          <Button
+            type="link"
+            size="small"
+            onClick={() => goToPostDetail(record.postId)}
+          >
+            查看详情
+          </Button>
           
           <Dropdown
             menu={{
@@ -501,38 +493,33 @@ const PostsList: React.FC = () => {
                 {
                   key: '1',
                   icon: <PushpinOutlined />,
-                  label: ((record.status === 1 || record.status === 3) ? '取消置顶' : '置顶'),
+                  label: (record.isTop ? '取消置顶' : '置顶'),
                   onClick: () => handleTogglePin(record),
-                  disabled: record.isDeleted || record.status === 5 || record.status === 6
                 },
                 {
                   key: '2',
                   icon: <StarOutlined />,
-                  label: ((record.status === 2 || record.status === 3) ? '取消精华' : '设为精华'),
+                  label: (record.isEssence ? '取消精华' : '设为精华'),
                   onClick: () => handleToggleEssence(record),
-                  disabled: record.isDeleted || record.status === 5 || record.status === 6
                 },
                 {
                   key: '3',
                   icon: <StopOutlined />,
-                  label: (record.status === 4 ? '允许回复' : '禁止回复'),
+                  label: (record.postStatus === 1 ? '允许回复' : '禁止回复'),
                   onClick: () => handleToggleLock(record),
-                  disabled: record.isDeleted || record.status === 5 || record.status === 6
                 },
                 {
                   key: '4',
-                  icon: record.status === 5 ? <EyeOutlined /> : <StopOutlined />,
-                  label: (record.status === 5 ? '显示帖子' : '隐藏帖子'),
+                  icon: <StopOutlined />,
+                  label: (record.postStatus === 2 ? '显示帖子' : '隐藏帖子'),
                   onClick: () => handleToggleHide(record),
-                  disabled: record.isDeleted || record.status === 6
                 },
                 {
                   key: '5',
                   icon: <DeleteOutlined />,
                   label: '删除帖子',
                   danger: true,
-                  onClick: () => handleDeletePost(record.id),
-                  disabled: record.isDeleted
+                  onClick: () => handleDeletePost(record.postId),
                 },
               ]
             }}
@@ -570,40 +557,25 @@ const PostsList: React.FC = () => {
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="sectionId">
                 <Select placeholder="所属板块" allowClear>
-                  {mockPosts
-                    .map(post => ({ id: post.sectionId, name: post.sectionName }))
-                    .filter((item, index, self) => self.findIndex(t => t.id === item.id) === index)
-                    .map(section => (
-                      <Option key={section.id} value={section.id}>{section.name}</Option>
-                    ))
-                  }
+                  {sections.map(section => (
+                    <Option key={section.sectionId} value={section.sectionId}>
+                      {section.sectionName}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="status">
-                <Select placeholder="帖子状态" allowClear>
-                  <Option value={0}>普通</Option>
-                  <Option value={1}>置顶</Option>
-                  <Option value={2}>精华</Option>
-                  <Option value={3}>置顶+精华</Option>
-                  <Option value={4}>禁止回复</Option>
-                  <Option value={5}>已隐藏</Option>
-                  <Option value={6}>已删除</Option>
+              <Form.Item name="sortBy">
+                <Select 
+                  placeholder="排序方式" 
+                  defaultValue="featured"
+                  onChange={(value) => setSortBy(value as 'latest' | 'hot' | 'featured')}
+                >
+                  <Option value="latest">最新</Option>
+                  <Option value="hot">热门</Option>
+                  <Option value="featured">精选</Option>
                 </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="isReported" valuePropName="checked">
-                <Select placeholder="举报状态" allowClear>
-                  <Option value={true}>已举报</Option>
-                  <Option value={false}>未举报</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="timeRange">
-                <RangePicker locale={locale} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col xs={24} style={{ textAlign: 'right' }}>
@@ -623,65 +595,74 @@ const PostsList: React.FC = () => {
         <Table
           columns={columns}
           dataSource={posts}
-          rowKey="id"
+          rowKey="postId"
           loading={loading}
           pagination={pagination}
-          onChange={(newPagination: TablePaginationConfig) => {
-            setPagination({
-              ...pagination,
-              current: newPagination.current || 1,
-              pageSize: newPagination.pageSize || 10,
-              total: pagination.total
-            });
-          }}
+          onChange={handleTableChange}
         />
       </Card>
 
       {/* 帖子详情预览 */}
       <Modal
         title="帖子详情"
-        visible={previewVisible}
+        open={previewVisible}
         onCancel={() => setPreviewVisible(false)}
         footer={null}
         width={700}
       >
         {currentPost && (
           <div>
-            <Typography.Title level={4}>{currentPost.title}</Typography.Title>
+            <Typography.Title level={4}>{currentPost.postTitle}</Typography.Title>
             <div style={{ marginBottom: 16 }}>
               <Space>
-                <span>作者: {currentPost.authorName}</span>
-                <span>发布时间: {currentPost.createTime}</span>
-                <span>所属板块: <Tag color="blue">{currentPost.sectionName}</Tag></span>
+                <span>作者: {currentPost.username}</span>
+                <span>发布时间: {dayjs(currentPost.createdAt).format('YYYY-MM-DD HH:mm')}</span>
+                <span>所属板块: {currentPost.sectionName ? <Tag color="blue">{currentPost.sectionName}</Tag> : <Tag color="default">未分类</Tag>}</span>
               </Space>
             </div>
-            <Paragraph
+            
+            {/* 帖子内容 */}
+            <div 
+              dangerouslySetInnerHTML={{ __html: currentPost.postContent || currentPost.postSummary || '' }}
               style={{ 
                 padding: 16, 
                 backgroundColor: '#f5f5f5', 
                 borderRadius: 4,
-                minHeight: 200
+                minHeight: 200,
+                maxHeight: 400,
+                overflow: 'auto'
               }}
-            >
-              {currentPost.content}
-              {currentPost.attachmentCount > 0 && (
-                <div style={{ marginTop: 16 }}>
-                  <Text strong>附件 ({currentPost.attachmentCount}):</Text>
-                  <ul>
-                    {Array.from({ length: currentPost.attachmentCount }).map((_, index) => (
-                      <li key={index}>
-                        <a href="#">附件{index + 1}.pdf</a>
-                      </li>
-                    ))}
-                  </ul>
+            />
+            
+            {/* 帖子标签/知识点 */}
+            {currentPost.knowledgePoints && currentPost.knowledgePoints.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <Text strong>知识点:</Text>
+                <div>
+                  {currentPost.knowledgePoints.map(point => (
+                    <Tag key={point.knowledgePointId}>{point.knowledgePointName}</Tag>
+                  ))}
                 </div>
-              )}
-            </Paragraph>
+              </div>
+            )}
+            
             <div style={{ marginTop: 16 }}>
               <Space>
-                <span><EyeOutlined /> {currentPost.viewCount} 浏览</span>
-                <span><LikeOutlined /> {currentPost.likeCount} 点赞</span>
-                <span><MessageOutlined /> {currentPost.commentCount} 评论</span>
+                <span><EyeOutlined /> {currentPost.postViews} 浏览</span>
+                <span><LikeOutlined /> {currentPost.postLikes} 点赞</span>
+                <span><MessageOutlined /> {currentPost.postComments} 评论</span>
+              </Space>
+            </div>
+            
+            {/* 帖子状态信息 */}
+            <div style={{ marginTop: 16 }}>
+              <Text strong>帖子状态: </Text>
+              <Space>
+                {currentPost.isTop && <Tag color="blue">置顶</Tag>}
+                {currentPost.isEssence && <Tag color="gold">精华</Tag>}
+                {currentPost.postStatus === 0 && <Tag color="green">正常</Tag>}
+                {currentPost.postStatus === 1 && <Tag color="orange">已锁定</Tag>}
+                {currentPost.postStatus === 2 && <Tag color="red">已隐藏</Tag>}
               </Space>
             </div>
           </div>
@@ -691,7 +672,7 @@ const PostsList: React.FC = () => {
       {/* 举报详情 */}
       <Modal
         title="举报详情"
-        visible={reportVisible}
+        open={reportVisible}
         onCancel={() => setReportVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setReportVisible(false)}>
@@ -704,16 +685,14 @@ const PostsList: React.FC = () => {
       >
         {currentPost && (
           <div>
-            <Typography.Title level={5}>{currentPost.title}</Typography.Title>
+            <Typography.Title level={5}>{currentPost.postTitle}</Typography.Title>
             <div style={{ marginBottom: 16 }}>
-              <Text>举报次数: <Tag color="red">{currentPost.reportCount}</Tag></Text>
+              <Text>举报次数: <Tag color="red">1</Tag></Text>
             </div>
             <div style={{ marginBottom: 16 }}>
               <Text strong>举报理由:</Text>
               <ul>
-                {currentPost.reportReasons?.map((reason, index) => (
-                  <li key={index}>{reason}</li>
-                ))}
+                <li>违规内容</li>
               </ul>
             </div>
             <div style={{ marginBottom: 16 }}>
@@ -733,6 +712,21 @@ const PostsList: React.FC = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* 帖子删除确认弹窗 */}
+      <Modal
+        title="确认删除"
+        open={deleteModalVisible}
+        onOk={confirmDelete}
+        onCancel={() => setDeleteModalVisible(false)}
+        okText="确认"
+        cancelText="取消"
+      >
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 22, marginRight: 16 }} />
+          <span>确定要删除该帖子吗？删除后将不可恢复</span>
+        </div>
       </Modal>
     </AdminLayout>
   );

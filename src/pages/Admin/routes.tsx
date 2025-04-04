@@ -5,15 +5,15 @@ import { Navigate } from 'react-router-dom';
 // 懒加载组件
 const AdminDashboard = lazy(() => import('./index'));
 const UsersList = lazy(() => import('./Users/UsersList'));
-const UserRoles = lazy(() => import('./Users/UserRoles'));
 const CoursesList = lazy(() => import('./Courses/CoursesList'));
 const QuestionsList = lazy(() => import('./Questions/QuestionsList'));
 const ExamsList = lazy(() => import('./Exams/ExamsList'));
 const ExamCreate = lazy(() => import('./Exams/ExamCreate'));
+const ExamDetail = lazy(() => import('./Exams/ExamDetail'));
 const CommentsManager = lazy(() => import('./Community/CommentsManager'));
 
 // 修正导入路径
-const PostsManager = lazy(() => import('./Community/PostsManager'));
+const PostsList = lazy(() => import('./Community/PostsList'));
 const SectionsList = lazy(() => import('./Community/SectionsList'));
 
 
@@ -54,13 +54,6 @@ const routes: RouteConfig[] = [
         element: <UsersList />,
         name: '用户列表',
         exact: true,
-      },
-      {
-        path: 'roles',
-        component: UserRoles,
-        element: <UserRoles />,
-        name: '角色权限',
-        exact: true
       },
     ],
   },
@@ -105,6 +98,27 @@ const routes: RouteConfig[] = [
         name: '创建考试',
         exact: true,
       },
+      {
+        path: 'detail/:examId',
+        component: ExamDetail,
+        element: <ExamDetail />,
+        name: '考试详情',
+        exact: true,
+      },
+      {
+        path: 'create',
+        component: ExamCreate,
+        element: <ExamCreate />,
+        name: '创建考试',
+        exact: true,
+      },
+      {
+        path: 'edit/:examId',
+        component: ExamCreate,
+        element: <ExamCreate />,
+        name: '编辑考试',
+        exact: true,
+      },
     ],
   },
   {
@@ -127,8 +141,8 @@ const routes: RouteConfig[] = [
       },
       {
         path: 'posts',
-        component: PostsManager,
-        element: <PostsManager />,
+        component: PostsList,
+        element: <PostsList />,
         name: '帖子管理',
         exact: true,
       },

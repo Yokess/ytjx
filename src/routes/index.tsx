@@ -29,6 +29,8 @@ import QuestionDetailPage from '../pages/Questions/QuestionDetail';
 
 // Admin模块路由
 import adminRoutes from '../pages/Admin/routes';
+// 导入AdminDashboard组件
+import AdminDashboard from '../pages/Admin/index';
 
 // 临时重定向组件，用于重定向到首页
 const RedirectToHome = () => <Navigate to="/" replace />;
@@ -48,6 +50,38 @@ const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
+  return children;
+};
+
+// 需要管理员权限的路由保护组件
+const AdminProtectedRoute = ({ children }: { children: React.ReactElement }) => {
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const location = useLocation();
+  
+  // 从localStorage获取userType确保最新值
+  const localUserType = localStorage.getItem('userType');
+  const userType = localUserType ? Number(localUserType) : user?.userType;
+  
+  console.log('管理员路由保护检查 - 认证状态:', isAuthenticated, '用户类型:', {
+    reduxUserType: user?.userType,
+    localStorageUserType: localUserType,
+    finalUserType: userType
+  }, '路径:', location.pathname);
+  
+  if (!isAuthenticated) {
+    // 未登录，重定向到登录页面
+    console.log('用户未登录，重定向到登录页面');
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  
+  // 检查用户类型是否为管理员 (userType=2)
+  if (userType !== 2) {
+    console.log('用户不是管理员，禁止访问管理后台');
+    // 不是管理员，重定向到首页
+    return <Navigate to="/" replace />;
+  }
+  
+  console.log('用户是管理员，允许访问管理后台');
   return children;
 };
 
@@ -127,36 +161,53 @@ const AppRoutes: React.FC = () => {
         </ProtectedRoute>
       } />
       
-      {/* 管理后台路由 - 需要登录 */}
+      {/* 管理后台路由 - 需要管理员权限 */}
       <Route path="/admin/*" element={
-        <ProtectedRoute>
+        <AdminProtectedRoute>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
-              <Route path="" element={adminRoutes[0].element} />
-              {adminRoutes.slice(1).map((route, index) => {
-                // 获取主路径部分
-                const mainPath = route.path.split('/').pop() || '';
-                return (
-                  <Route
-                    key={index}
-                    path={mainPath + "/*"}
-                    element={route.element}
-                  >
-                    {route.children && route.children.length > 0 && (
-                      route.children.map((childRoute, childIndex) => (
+              {/* 控制台根路径特殊处理 */}
+              <Route index element={<AdminDashboard />} />
+              <Route path="" element={<AdminDashboard />} />
+              
+              {/* 其他管理路由 */}
+              {adminRoutes.map((route, index) => {
+                // 如果是控制台路由，已经单独处理了
+                if (route.path === '/admin') {
+                  return null;
+                }
+                
+                const relativePath = route.path.replace('/admin/', '');
+                
+                if (!route.children || route.children.length === 0) {
+                  return (
+                    <Route
+                      key={index}
+                      path={relativePath}
+                      element={route.element}
+                    />
+                  );
+                } else {
+                  return (
+                    <Route 
+                      key={index}
+                      path={relativePath}
+                      element={route.element}
+                    >
+                      {route.children.map((child, childIndex) => (
                         <Route
                           key={`${index}-${childIndex}`}
-                          path={childRoute.path}
-                          element={childRoute.element}
+                          path={child.path}
+                          element={child.element}
                         />
-                      ))
-                    )}
-                  </Route>
-                );
+                      ))}
+                    </Route>
+                  );
+                }
               })}
             </Routes>
           </Suspense>
-        </ProtectedRoute>
+        </AdminProtectedRoute>
       } />
       
       {/* 404页面 */}

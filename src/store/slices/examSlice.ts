@@ -185,7 +185,12 @@ export const submitAnswers = createAsyncThunk(
     try {
       const response = await submitExamAnswers(examId, answers);
       if (response.code === 200) {
-        return response.data;
+        // 提交成功后立即获取考试结果
+        const resultResponse = await getExamResult(examId);
+        if (resultResponse.code === 200) {
+          return resultResponse.data;
+        }
+        return { userExamId: response.data.userExamId, submitTime: response.data.submitTime };
       }
       return rejectWithValue(response.message);
     } catch (error: any) {

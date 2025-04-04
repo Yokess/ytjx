@@ -31,8 +31,8 @@ import {
 } from '@ant-design/icons';
 import MainLayout from '../../components/layout/MainLayout';
 import styles from './PostDetail.module.scss';
-import { getPostDetail, getPostComments, likePost, favoritePost, createComment, likeComment, replyComment } from '../../api/communityApi';
-import type { PostDetail, Comment } from '../../types/community';
+import { getPostById, getComments, likePost, unlikePost, createComment, likeComment, unlikeComment } from '../../api/communityApi';
+import type { PostDetail, Comment, CommentReply, CreateCommentDTO } from '../../types/community';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -46,7 +46,7 @@ interface CommentProps {
   actions?: React.ReactNode[];
 }
 
-const Comment: React.FC<CommentProps> = ({ 
+const CustomComment: React.FC<CommentProps> = ({ 
   author, 
   avatar, 
   content, 
@@ -82,10 +82,10 @@ const Comment: React.FC<CommentProps> = ({
 interface SidebarContentProps {
   post: PostDetail;
   relatedPosts: Array<{
-    id: string;
-    title: string;
-    viewCount: number;
-    commentCount: number;
+    postId: number;
+    postTitle: string;
+    postViews: number;
+    postComments: number;
   }>;
 }
 
@@ -95,20 +95,20 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ post, relatedPosts }) =
       {/* 作者信息 */}
       <Card className={styles.authorCard}>
         <div className={styles.authorInfo}>
-          <Avatar size={64} src={post.author.avatar} />
+          <Avatar size={64} src={post.userAvatar || "https://joeschmoe.io/api/v1/random"} />
           <div className={styles.authorMeta}>
             <div className={styles.authorNameRow}>
-              <Text strong className={styles.authorName}>{post.author.name}</Text>
-              <Tag color="#4f46e5" className={styles.levelTag}>Lv.{post.author.level}</Tag>
+              <Text strong className={styles.authorName}>{post.username}</Text>
+              <Tag color="#4f46e5" className={styles.levelTag}>Lv.3</Tag>
             </div>
-            <Text type="secondary">{post.author.title}</Text>
+            <Text type="secondary">考研学子</Text>
             <div className={styles.authorStats}>
               <div className={styles.statItem}>
-                <div className={styles.statValue}>{post.author.postCount}</div>
+                <div className={styles.statValue}>42</div>
                 <div className={styles.statLabel}>发帖</div>
               </div>
               <div className={styles.statItem}>
-                <div className={styles.statValue}>{post.author.followersCount}</div>
+                <div className={styles.statValue}>128</div>
                 <div className={styles.statLabel}>粉丝</div>
               </div>
             </div>
@@ -128,12 +128,12 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ post, relatedPosts }) =
           dataSource={relatedPosts}
           renderItem={item => (
             <List.Item className={styles.relatedPostItem}>
-              <Link to={`/community/post/${item.id}`} className={styles.relatedPostLink}>
-                {item.title}
+              <Link to={`/community/post/${item.postId}`} className={styles.relatedPostLink}>
+                {item.postTitle}
               </Link>
               <div className={styles.relatedPostMeta}>
-                <span><EyeOutlined /> {item.viewCount}</span>
-                <span><MessageOutlined /> {item.commentCount}</span>
+                <span><EyeOutlined /> {item.postViews}</span>
+                <span><MessageOutlined /> {item.postComments}</span>
               </div>
             </List.Item>
           )}
@@ -182,20 +182,22 @@ const PostDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [post, setPost] = useState<PostDetail | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<Array<{
-    id: string;
-    title: string;
-    viewCount: number;
-    commentCount: number;
+    postId: number;
+    postTitle: string;
+    postViews: number;
+    postComments: number;
   }>>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [totalComments, setTotalComments] = useState(0);
   const [commentContent, setCommentContent] = useState('');
   const [replyContent, setReplyContent] = useState('');
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyingToName, setReplyingToName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentsLoading, setCommentsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
   
   // 获取帖子详情
   useEffect(() => {
@@ -204,13 +206,36 @@ const PostDetailPage: React.FC = () => {
       
       setLoading(true);
       try {
-        const response = await getPostDetail(postId);
+        const response = await getPostById(parseInt(postId));
         setPost(response.data);
+        
+        // 模拟相关帖子数据（实际应从API获取）
+        setRelatedPosts([
+          {
+            postId: 1,
+            postTitle: '考研数学复习方法总结',
+            postViews: 1200,
+            postComments: 42
+          },
+          {
+            postId: 2,
+            postTitle: '如何高效记忆英语单词？',
+            postViews: 980,
+            postComments: 36
+          },
+          {
+            postId: 3,
+            postTitle: '2025考研政治大纲解读',
+            postViews: 1500,
+            postComments: 56
+          }
+        ]);
       } catch (error) {
         console.error('获取帖子详情失败:', error);
         message.error('获取帖子详情失败，请稍后重试');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     
     fetchPostDetail();
@@ -223,56 +248,57 @@ const PostDetailPage: React.FC = () => {
       
       setCommentsLoading(true);
       try {
-        const response = await getPostComments(postId);
-        setComments(response.data.comments);
+        const response = await getComments(parseInt(postId), page, pageSize);
+        setComments(response.data.list);
         setTotalComments(response.data.total);
       } catch (error) {
         console.error('获取评论失败:', error);
         message.error('获取评论失败，请稍后重试');
+      } finally {
+        setCommentsLoading(false);
       }
-      setCommentsLoading(false);
     };
     
-    fetchComments();
-  }, [postId]);
+    if (post) {
+      fetchComments();
+    }
+  }, [postId, post, page, pageSize]);
   
-  // 处理点赞
+  // 点赞/取消点赞
   const handleLike = async () => {
     if (!postId || !post) return;
     
     try {
-      const response = await likePost(postId);
-      setPost({
-        ...post,
-        isLiked: response.data.isLiked,
-        likeCount: response.data.likeCount
-      });
-      message.success(response.data.isLiked ? '点赞成功' : '取消点赞成功');
+      const postIdNum = parseInt(postId);
+      if (post.hasLiked) {
+        await unlikePost(postIdNum);
+        setPost({
+          ...post,
+          hasLiked: false,
+          postLikes: post.postLikes - 1
+        });
+        message.success('已取消点赞');
+      } else {
+        await likePost(postIdNum);
+        setPost({
+          ...post,
+          hasLiked: true,
+          postLikes: post.postLikes + 1
+        });
+        message.success('点赞成功');
+      }
     } catch (error) {
       console.error('点赞操作失败:', error);
       message.error('操作失败，请稍后重试');
     }
   };
   
-  // 处理收藏
+  // 收藏功能
   const handleFavorite = async () => {
-    if (!postId || !post) return;
-    
-    try {
-      const response = await favoritePost(postId);
-      setPost({
-        ...post,
-        isFavorited: response.data.isFavorited,
-        favoriteCount: response.data.favoriteCount
-      });
-      message.success(response.data.isFavorited ? '收藏成功' : '取消收藏成功');
-    } catch (error) {
-      console.error('收藏操作失败:', error);
-      message.error('操作失败，请稍后重试');
-    }
+    message.info('收藏功能暂未开放，敬请期待');
   };
   
-  // 处理分享
+  // 分享功能
   const handleShare = () => {
     // 获取当前帖子链接
     const url = window.location.href;
@@ -298,17 +324,21 @@ const PostDetailPage: React.FC = () => {
     setSubmitting(true);
     
     try {
-      const response = await createComment(postId, { content: commentContent });
+      const commentData: CreateCommentDTO = {
+        postId: parseInt(postId),
+        commentContent: commentContent.trim()
+      };
+      
+      const response = await createComment(commentData);
       
       // 更新评论列表
-      setComments([response.data, ...comments]);
-      setTotalComments(totalComments + 1);
+      setComments(prev => [response.data, ...prev]);
       
       // 更新帖子评论数
       if (post) {
         setPost({
           ...post,
-          commentCount: post.commentCount + 1
+          postComments: post.postComments + 1
         });
       }
       
@@ -334,14 +364,21 @@ const PostDetailPage: React.FC = () => {
     setSubmitting(true);
     
     try {
-      const response = await replyComment(replyingTo, { content: replyContent });
+      const replyData: CreateCommentDTO = {
+        postId: parseInt(postId),
+        commentContent: replyContent.trim(),
+        parentCommentId: replyingTo
+      };
+      
+      const response = await createComment(replyData);
       
       // 更新评论列表，找到被回复的评论并添加回复
       const updatedComments = comments.map(comment => {
-        if (comment.id === replyingTo) {
+        if (comment.commentId === replyingTo) {
+          const reply = response.data as unknown as CommentReply;
           return {
             ...comment,
-            replies: [...comment.replies, response.data]
+            replies: [...(comment.replies || []), reply]
           };
         }
         return comment;
@@ -353,7 +390,7 @@ const PostDetailPage: React.FC = () => {
       if (post) {
         setPost({
           ...post,
-          commentCount: post.commentCount + 1
+          postComments: post.postComments + 1
         });
       }
       
@@ -370,40 +407,97 @@ const PostDetailPage: React.FC = () => {
     }
   };
   
-  // 处理评论点赞
-  const handleCommentLike = async (commentId: string) => {
+  // 评论点赞
+  const handleCommentLike = async (commentId: number) => {
     try {
-      const response = await likeComment(commentId);
+      // 找到当前评论
+      const targetComment = comments.find(c => c.commentId === commentId);
+      if (!targetComment) return;
       
-      // 更新评论列表中的点赞状态
-      const updatedComments = comments.map(comment => {
-        if (comment.id === commentId) {
-          return {
-            ...comment,
-            isLiked: response.data.isLiked,
-            likeCount: response.data.likeCount
-          };
-        }
+      if (targetComment.hasLiked) {
+        // 取消点赞
+        await unlikeComment(commentId);
         
-        // 检查回复中是否有匹配项
-        const updatedReplies = comment.replies.map(reply => {
-          if (reply.id === commentId) {
+        // 更新状态
+        setComments(comments.map(c => 
+          c.commentId === commentId 
+            ? { ...c, hasLiked: false, likeCount: c.likeCount - 1 } 
+            : c
+        ));
+        
+        message.success('已取消点赞');
+      } else {
+        // 点赞
+        await likeComment(commentId);
+        
+        // 更新状态
+        setComments(comments.map(c => 
+          c.commentId === commentId 
+            ? { ...c, hasLiked: true, likeCount: c.likeCount + 1 } 
+            : c
+        ));
+        
+        message.success('点赞成功');
+      }
+    } catch (error) {
+      console.error('点赞评论失败:', error);
+      message.error('操作失败，请稍后重试');
+    }
+  };
+  
+  // 子评论点赞
+  const handleReplyLike = async (commentId: number, parentId: number) => {
+    try {
+      // 找到当前评论和父评论
+      const parentComment = comments.find(c => c.commentId === parentId);
+      if (!parentComment || !parentComment.replies) return;
+      
+      const targetReply = parentComment.replies.find(r => r.commentId === commentId);
+      if (!targetReply) return;
+      
+      if (targetReply.hasLiked) {
+        // 取消点赞
+        await unlikeComment(commentId);
+        
+        // 更新状态
+        const updatedComments = comments.map(c => {
+          if (c.commentId === parentId) {
             return {
-              ...reply,
-              isLiked: response.data.isLiked,
-              likeCount: response.data.likeCount
+              ...c,
+              replies: c.replies.map(r => 
+                r.commentId === commentId 
+                  ? { ...r, hasLiked: false, likeCount: r.likeCount - 1 } 
+                  : r
+              )
             };
           }
-          return reply;
+          return c;
         });
         
-        return {
-          ...comment,
-          replies: updatedReplies
-        };
-      });
-      
-      setComments(updatedComments);
+        setComments(updatedComments);
+        message.success('已取消点赞');
+      } else {
+        // 点赞
+        await likeComment(commentId);
+        
+        // 更新状态
+        const updatedComments = comments.map(c => {
+          if (c.commentId === parentId) {
+            return {
+              ...c,
+              replies: c.replies.map(r => 
+                r.commentId === commentId 
+                  ? { ...r, hasLiked: true, likeCount: r.likeCount + 1 } 
+                  : r
+              )
+            };
+          }
+          return c;
+        });
+        
+        setComments(updatedComments);
+        message.success('点赞成功');
+      }
     } catch (error) {
       console.error('点赞评论失败:', error);
       message.error('操作失败，请稍后重试');
@@ -411,7 +505,7 @@ const PostDetailPage: React.FC = () => {
   };
   
   // 开始回复
-  const startReply = (commentId: string, authorName: string) => {
+  const startReply = (commentId: number, authorName: string) => {
     setReplyingTo(commentId);
     setReplyingToName(authorName);
     
@@ -432,6 +526,11 @@ const PostDetailPage: React.FC = () => {
   // 返回上一页
   const goBack = () => {
     navigate('/community');
+  };
+  
+  // 举报帖子
+  const handleReport = () => {
+    message.info('举报功能暂未开放，敬请期待');
   };
   
   if (loading) {
@@ -469,7 +568,7 @@ const PostDetailPage: React.FC = () => {
             <Breadcrumb.Item>
               <Link to="/community">学习社区</Link>
             </Breadcrumb.Item>
-            <Breadcrumb.Item>{post.section}</Breadcrumb.Item>
+            <Breadcrumb.Item>{post.sectionName}</Breadcrumb.Item>
           </Breadcrumb>
         </div>
         
@@ -486,34 +585,36 @@ const PostDetailPage: React.FC = () => {
         {/* 帖子内容 */}
         <Card className={styles.postCard}>
           <div className={styles.postHeader}>
-            <Title level={2}>{post.title}</Title>
+            <Title level={2}>{post.postTitle}</Title>
             <div className={styles.postMeta}>
               <div className={styles.metaItem}>
                 <UserOutlined />
-                <span>{post.author.name}</span>
+                <span>{post.username}</span>
               </div>
               <div className={styles.metaItem}>
                 <ClockCircleOutlined />
-                <span>{post.createTime}</span>
+                <span>{new Date(post.createdAt).toLocaleString()}</span>
               </div>
               <div className={styles.metaItem}>
                 <EyeOutlined />
-                <span>{post.viewCount} 浏览</span>
+                <span>{post.postViews} 浏览</span>
               </div>
-              <div className={styles.metaItem}>
-                <TagOutlined />
-                <span>
-                  {post.tags.map((tag, index) => (
-                    <Tag key={index} color="#2db7f5">{tag}</Tag>
-                  ))}
-                </span>
-              </div>
+              {post.knowledgePoints && post.knowledgePoints.length > 0 && (
+                <div className={styles.metaItem}>
+                  <TagOutlined />
+                  <span>
+                    {post.knowledgePoints.map((tag, index) => (
+                      <Tag key={index} color="#2db7f5">{tag.knowledgePointName}</Tag>
+                    ))}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           
           <Divider />
           
-          <div className={styles.postContent} dangerouslySetInnerHTML={{ __html: post.content }} />
+          <div className={styles.postContent} dangerouslySetInnerHTML={{ __html: post.postContent }} />
           
           <Divider />
           
@@ -521,11 +622,11 @@ const PostDetailPage: React.FC = () => {
             <div className={styles.leftActions}>
               <Button
                 type="text"
-                icon={post.isLiked ? <LikeFilled /> : <LikeOutlined />}
+                icon={post.hasLiked ? <LikeFilled /> : <LikeOutlined />}
                 onClick={handleLike}
-                className={post.isLiked ? styles.active : ''}
+                className={post.hasLiked ? styles.active : ''}
               >
-                点赞 {post.likeCount}
+                点赞 {post.postLikes}
               </Button>
               <Button
                 type="text"
@@ -542,15 +643,14 @@ const PostDetailPage: React.FC = () => {
                   }
                 }}
               >
-                评论 {post.commentCount}
+                评论 {post.postComments}
               </Button>
               <Button
                 type="text"
-                icon={post.isFavorited ? <StarFilled /> : <StarOutlined />}
+                icon={<StarOutlined />}
                 onClick={handleFavorite}
-                className={post.isFavorited ? styles.active : ''}
               >
-                收藏 {post.favoriteCount}
+                收藏
               </Button>
               <Button
                 type="text"
@@ -559,6 +659,13 @@ const PostDetailPage: React.FC = () => {
               >
                 分享
               </Button>
+              <Button
+                type="text"
+                danger
+                onClick={handleReport}
+              >
+                举报
+              </Button>
             </div>
           </div>
         </Card>
@@ -566,16 +673,16 @@ const PostDetailPage: React.FC = () => {
         {/* 作者信息 */}
         <Card className={styles.authorCard}>
           <div className={styles.authorInfo}>
-            <Avatar size={64} src={post.author.avatar} />
+            <Avatar size={64} src={post.userAvatar || 'https://joeschmoe.io/api/v1/random'} />
             <div className={styles.authorMeta}>
               <div className={styles.authorName}>
-                <Text strong>{post.author.name}</Text>
-                <Tag color="#108ee9">Lv.{post.author.level}</Tag>
+                <Text strong>{post.username}</Text>
+                <Tag color="#108ee9">Lv.3</Tag>
               </div>
-              <div className={styles.authorTitle}>{post.author.title}</div>
+              <div className={styles.authorTitle}>考研学子</div>
               <div className={styles.authorStats}>
-                <span>发帖 {post.author.postCount}</span>
-                <span>粉丝 {post.author.followersCount}</span>
+                <span>发帖 42</span>
+                <span>粉丝 128</span>
               </div>
             </div>
           </div>
@@ -587,7 +694,7 @@ const PostDetailPage: React.FC = () => {
         {/* 评论区 */}
         <Card 
           className={styles.commentsCard}
-          title={<div className={styles.commentsTitle}>评论 ({post.commentCount})</div>}
+          title={<div className={styles.commentsTitle}>评论 ({post.postComments})</div>}
         >
           {/* 评论输入框 */}
           <div id="comment-box" className={styles.commentBox}>
@@ -665,28 +772,28 @@ const PostDetailPage: React.FC = () => {
           ) : (
             <div className={styles.commentsList}>
               {comments.map(comment => (
-                <div key={comment.id} className={styles.commentItem}>
-                  <Comment
+                <div key={comment.commentId} className={styles.commentItem}>
+                  <CustomComment
                     author={
                       <div className={styles.commentAuthor}>
-                        <Text strong>{comment.author.name}</Text>
-                        <Tag color="#87d068">Lv.{comment.author.level}</Tag>
+                        <Text strong>{comment.username}</Text>
+                        <Tag color="#87d068">Lv.3</Tag>
                       </div>
                     }
-                    avatar={<Avatar src={comment.author.avatar} />}
-                    content={<div>{comment.content}</div>}
-                    datetime={comment.createTime}
+                    avatar={<Avatar src={comment.userAvatar || 'https://joeschmoe.io/api/v1/random'} />}
+                    content={<div>{comment.commentContent}</div>}
+                    datetime={new Date(comment.createdAt).toLocaleString()}
                     actions={[
                       <span 
                         key="like" 
-                        onClick={() => handleCommentLike(comment.id)}
-                        className={comment.isLiked ? styles.liked : ''}
+                        onClick={() => handleCommentLike(comment.commentId)}
+                        className={comment.hasLiked ? styles.liked : ''}
                       >
-                        {comment.isLiked ? <LikeFilled /> : <LikeOutlined />} {comment.likeCount}
+                        {comment.hasLiked ? <LikeFilled /> : <LikeOutlined />} {comment.likeCount}
                       </span>,
                       <span 
                         key="reply" 
-                        onClick={() => startReply(comment.id, comment.author.name)}
+                        onClick={() => startReply(comment.commentId, comment.username)}
                       >
                         回复
                       </span>
@@ -697,33 +804,28 @@ const PostDetailPage: React.FC = () => {
                   {comment.replies && comment.replies.length > 0 && (
                     <div className={styles.repliesList}>
                       {comment.replies.map(reply => (
-                        <div key={reply.id} className={styles.replyItem}>
-                          <Comment
+                        <div key={reply.commentId} className={styles.replyItem}>
+                          <CustomComment
                             author={
                               <div className={styles.commentAuthor}>
-                                <Text strong>{reply.author.name}</Text>
-                                <Tag color="#87d068">Lv.{reply.author.level}</Tag>
-                                {reply.replyTo && (
-                                  <span className={styles.replyToInfo}>
-                                    回复 <Text strong>{reply.replyTo.name}</Text>
-                                  </span>
-                                )}
+                                <Text strong>{reply.username}</Text>
+                                <Tag color="#87d068">Lv.3</Tag>
                               </div>
                             }
-                            avatar={<Avatar src={reply.author.avatar} />}
-                            content={<div>{reply.content}</div>}
-                            datetime={reply.createTime}
+                            avatar={<Avatar src={reply.userAvatar || 'https://joeschmoe.io/api/v1/random'} />}
+                            content={<div>{reply.commentContent}</div>}
+                            datetime={new Date(reply.createdAt).toLocaleString()}
                             actions={[
                               <span 
                                 key="like" 
-                                onClick={() => handleCommentLike(reply.id)}
-                                className={reply.isLiked ? styles.liked : ''}
+                                onClick={() => handleReplyLike(reply.commentId, comment.commentId)}
+                                className={reply.hasLiked ? styles.liked : ''}
                               >
-                                {reply.isLiked ? <LikeFilled /> : <LikeOutlined />} {reply.likeCount}
+                                {reply.hasLiked ? <LikeFilled /> : <LikeOutlined />} {reply.likeCount}
                               </span>,
                               <span 
                                 key="reply" 
-                                onClick={() => startReply(comment.id, reply.author.name)}
+                                onClick={() => startReply(comment.commentId, reply.username)}
                               >
                                 回复
                               </span>

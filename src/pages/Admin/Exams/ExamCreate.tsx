@@ -37,6 +37,8 @@ import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import AdminLayout from '../../../components/layout/AdminLayout';
+import { createExam, getQuestionsList } from '../../../api/adminApi';
+import { QuestionType as QuestionTypeEnum, ExamStatus } from '../../../types/exam';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -46,16 +48,16 @@ const { TabPane } = Tabs;
 
 // 题目选项类型
 interface QuestionOption {
-  id: string;
-  content: string;
+  optionKey: string;
+  optionValue: string;
   isCorrect: boolean;
 }
 
 // 题目类型定义
 interface QuestionType {
-  id: number;
-  content: string;
-  type: 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay';
+  questionId: number;
+  questionText: string;
+  questionType: QuestionTypeEnum;
   difficulty: 'easy' | 'medium' | 'hard';
   options: QuestionOption[];
   answer: string;
@@ -65,93 +67,30 @@ interface QuestionType {
   updateTime: string;
   source: string;
   knowPoints: string[];
-  score?: number; // 题目分数，用于考试
+  questionScore?: number; // 题目分数，用于考试
 }
 
 // 考试题目类型
 interface ExamQuestionType extends QuestionType {
   examId: number;
-  score: number;
+  questionScore: number;
   sort: number;
 }
 
 // 题目类型映射
-const questionTypeMap: Record<'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay', { text: string; color: string }> = {
-  single: { text: '单选题', color: 'blue' },
-  multiple: { text: '多选题', color: 'purple' },
-  judge: { text: '判断题', color: 'cyan' },
-  fillBlank: { text: '填空题', color: 'orange' },
-  essay: { text: '问答题', color: 'green' }
+const questionTypeMap: Record<number, { text: string; color: string }> = {
+  [QuestionTypeEnum.SINGLE_CHOICE]: { text: '单选题', color: 'blue' },
+  [QuestionTypeEnum.MULTIPLE_CHOICE]: { text: '多选题', color: 'purple' },
+  [QuestionTypeEnum.JUDGE]: { text: '判断题', color: 'cyan' },
+  [QuestionTypeEnum.FILL_BLANK]: { text: '填空题', color: 'orange' },
+  [QuestionTypeEnum.ESSAY]: { text: '问答题', color: 'green' }
 };
 
 // 难度级别映射
-const difficultyMap: Record<'easy' | 'medium' | 'hard', { text: string; color: string }> = {
+const difficultyMap: Record<string, { text: string; color: string }> = {
   easy: { text: '简单', color: 'success' },
-  medium: { text: '中等', color: 'success' },
+  medium: { text: '中等', color: 'warning' },
   hard: { text: '困难', color: 'error' }
-};
-
-// 生成模拟题目数据
-const generateMockQuestions = (): QuestionType[] => {
-  // 生成题目数量
-  const count = 80; 
-  return Array.from({ length: count }).map((_, index) => {
-    const qid = index + 1;
-    const type = ['single', 'multiple', 'judge', 'fillBlank', 'essay'][Math.floor(Math.random() * 5)] as 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay';
-    const difficulty = ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)] as 'easy' | 'medium' | 'hard';
-    
-    let options: QuestionOption[] = [];
-    let answer = '';
-    
-    switch (type) {
-      case 'single':
-        options = [
-          { id: 'A', content: `选项A-${qid}`, isCorrect: true },
-          { id: 'B', content: `选项B-${qid}`, isCorrect: false },
-          { id: 'C', content: `选项C-${qid}`, isCorrect: false },
-          { id: 'D', content: `选项D-${qid}`, isCorrect: false }
-        ];
-        answer = 'A';
-        break;
-      case 'multiple':
-        options = [
-          { id: 'A', content: `选项A-${qid}`, isCorrect: true },
-          { id: 'B', content: `选项B-${qid}`, isCorrect: true },
-          { id: 'C', content: `选项C-${qid}`, isCorrect: false },
-          { id: 'D', content: `选项D-${qid}`, isCorrect: false }
-        ];
-        answer = 'A,B';
-        break;
-      case 'judge':
-        options = [
-          { id: 'T', content: '正确', isCorrect: Math.random() > 0.5 },
-          { id: 'F', content: '错误', isCorrect: !options[0]?.isCorrect }
-        ];
-        answer = options[0]?.isCorrect ? 'T' : 'F';
-        break;
-      case 'fillBlank':
-        answer = `答案${qid}`;
-        break;
-      case 'essay':
-        answer = `这是问答题${qid}的标准答案，包含关键点1、关键点2和关键点3。`;
-        break;
-    }
-    
-    return {
-      id: qid,
-      content: `这是第${qid}题。这是一道${difficulty}难度的${type === 'single' ? '单选题' : type === 'multiple' ? '多选题' : type === 'judge' ? '判断题' : type === 'fillBlank' ? '填空题' : '问答题'}`,
-      type,
-      difficulty,
-      options,
-      answer,
-      analysis: `这是第${qid}题的解析，解释了为什么选择${answer}是正确的。`,
-      tags: [`标签${qid}-1`, `标签${qid}-2`],
-      createTime: `2023-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-      updateTime: `2023-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-      source: `来源${Math.floor(Math.random() * 5) + 1}`,
-      knowPoints: [`知识点${qid}-1`, `知识点${qid}-2`]
-    };
-  });
 };
 
 const ExamCreate: React.FC = () => {
@@ -180,15 +119,30 @@ const ExamCreate: React.FC = () => {
   }, []);
   
   // 获取题目列表
-  const fetchQuestions = () => {
+  const fetchQuestions = async () => {
     setQuestionLoading(true);
-    // 模拟API请求
-    setTimeout(() => {
-      const questions = generateMockQuestions();
-      setAllQuestions(questions);
-      setFilteredQuestions(questions);
+    try {
+      // 从API获取题目列表
+      const response = await getQuestionsList({
+        page: 1,
+        size: 1000 // 获取更多题目以确保能显示所有题目
+      });
+      
+      if (response.success && response.data) {
+        const questions = response.data.list || [];
+        setAllQuestions(questions);
+        setFilteredQuestions(questions);
+        console.log('获取题目列表成功:', questions);
+      } else {
+        message.error(response.message || '获取题目列表失败');
+        console.error('获取题目列表返回错误:', response);
+      }
+    } catch (error) {
+      console.error('获取题目列表失败:', error);
+      message.error('获取题目列表失败');
+    } finally {
       setQuestionLoading(false);
-    }, 500);
+    }
   };
   
   // 过滤题目
@@ -198,13 +152,14 @@ const ExamCreate: React.FC = () => {
     if (values.keyword) {
       const keyword = values.keyword.toLowerCase();
       result = result.filter(q => 
-        q.content.toLowerCase().includes(keyword) || 
-        q.analysis.toLowerCase().includes(keyword)
+        q.questionText.toLowerCase().includes(keyword) || 
+        q.analysis?.toLowerCase().includes(keyword) ||
+        q.tags?.some(tag => tag.toLowerCase().includes(keyword))
       );
     }
     
-    if (values.type) {
-      result = result.filter(q => q.type === values.type);
+    if (values.type !== undefined && values.type !== null) {
+      result = result.filter(q => q.questionType === Number(values.type));
     }
     
     if (values.difficulty) {
@@ -213,7 +168,7 @@ const ExamCreate: React.FC = () => {
     
     if (values.tags && values.tags.length > 0) {
       result = result.filter(q => 
-        q.tags.some(tag => values.tags.includes(tag))
+        q.tags && q.tags.some(tag => values.tags.includes(tag))
       );
     }
     
@@ -235,92 +190,88 @@ const ExamCreate: React.FC = () => {
   const handleOpenQuestionPool = () => {
     setQuestionPoolVisible(true);
     // 更新已选择的题目ID列表
-    setSelectedQuestionIds(examQuestions.map(q => q.id));
+    setSelectedQuestionIds(examQuestions.map(q => q.questionId));
   };
   
   // 关闭题目选择对话框
   const handleCloseQuestionPool = () => {
     setQuestionPoolVisible(false);
+    // 清空已选择的题目ID
+    setSelectedQuestionIds([]);
   };
   
   // 选择题目
   const handleSelectQuestions = () => {
-    // 获取选中的题目
-    const selectedQuestions = allQuestions.filter(q => selectedQuestionIds.includes(q.id));
+    console.log('选择的题目ID:', selectedQuestionIds);
     
-    // 添加到考试题目中
-    const newExamQuestions: ExamQuestionType[] = selectedQuestions.map((q, index) => {
-      // 如果题目已经在考试中，保留原来的分数和排序
-      const existingQuestion = examQuestions.find(eq => eq.id === q.id);
-      
-      if (existingQuestion) {
-        return existingQuestion;
-      }
-      
-      // 新题目，根据类型设置默认分数
-      let defaultScore = 0;
-      switch (q.type) {
-        case 'single':
-          defaultScore = 2;
-          break;
-        case 'multiple':
-          defaultScore = 4;
-          break;
-        case 'judge':
-          defaultScore = 1;
-          break;
-        case 'fillBlank':
-          defaultScore = 3;
-          break;
-        case 'essay':
-          defaultScore = 10;
-          break;
-      }
+    // 获取选中的题目
+    const selectedQuestions = allQuestions.filter(q => selectedQuestionIds.includes(q.questionId));
+    console.log('选择的题目详情:', selectedQuestions);
+    
+    // 已添加的题目ID
+    const existingIds = examQuestions.map(q => q.questionId);
+    
+    // 过滤掉已添加的题目
+    const newQuestions = selectedQuestions.filter(q => !existingIds.includes(q.questionId));
+    
+    if (newQuestions.length === 0) {
+      message.info('所选题目都已添加到考试中');
+      return;
+    }
+    
+    // 添加到考试题目列表
+    const newExamQuestions = newQuestions.map((q, index) => {
+      // 按题目类型设置默认分数
+      let defaultScore = 2; // 基础分数
+      if (q.questionType === QuestionTypeEnum.MULTIPLE_CHOICE) defaultScore = 3;
+      if (q.questionType === QuestionTypeEnum.ESSAY) defaultScore = 5;
       
       return {
         ...q,
-        examId: 0, // 新考试，暂时用0
-        score: defaultScore,
+        examId: 0, // 创建新考试，暂时设为0
+        questionScore: defaultScore,
         sort: examQuestions.length + index + 1
       };
     });
     
-    setExamQuestions(newExamQuestions);
+    setExamQuestions([...examQuestions, ...newExamQuestions]);
     setQuestionPoolVisible(false);
+    message.success(`已添加 ${newQuestions.length} 道题目`);
     
     // 更新总分
-    updateTotalScore(newExamQuestions);
+    updateTotalScore([...examQuestions, ...newExamQuestions]);
+    
+    // 清空选择
+    setSelectedQuestionIds([]);
   };
   
-  // 更新总分
+  // 更新考试总分
   const updateTotalScore = (questions: ExamQuestionType[]) => {
-    const totalScore = questions.reduce((sum, q) => sum + q.score, 0);
+    const totalScore = questions.reduce((sum, q) => sum + q.questionScore, 0);
     form.setFieldsValue({ totalScore });
   };
   
-  // 移除题目
+  // 删除题目
   const handleRemoveQuestion = (questionId: number) => {
-    const newExamQuestions = examQuestions.filter(q => q.id !== questionId);
-    setExamQuestions(newExamQuestions);
+    const newQuestions = examQuestions.filter(q => q.questionId !== questionId);
     
-    // 更新排序
-    const reorderedQuestions = newExamQuestions.map((q, index) => ({
+    // 重新排序
+    const sortedQuestions = newQuestions.map((q, index) => ({
       ...q,
       sort: index + 1
     }));
     
-    setExamQuestions(reorderedQuestions);
-    updateTotalScore(reorderedQuestions);
+    setExamQuestions(sortedQuestions);
+    updateTotalScore(sortedQuestions);
   };
   
   // 修改题目分数
   const handleScoreChange = (questionId: number, score: number) => {
-    const newExamQuestions = examQuestions.map(q => 
-      q.id === questionId ? { ...q, score } : q
+    const newQuestions = examQuestions.map(q => 
+      q.questionId === questionId ? { ...q, questionScore: score } : q
     );
-    
-    setExamQuestions(newExamQuestions);
-    updateTotalScore(newExamQuestions);
+    setExamQuestions(newQuestions);
+    updateTotalScore(newQuestions);
   };
   
   // 预览题目
@@ -330,7 +281,7 @@ const ExamCreate: React.FC = () => {
   };
   
   // 提交表单
-  const handleSubmit = (values: any) => {
+  const handleSubmit = async (values: any) => {
     if (examQuestions.length === 0) {
       message.error('请至少添加一道题目');
       return;
@@ -338,26 +289,44 @@ const ExamCreate: React.FC = () => {
     
     setLoading(true);
     
+    // 处理时间 - 使用ISO格式以符合Java的LocalDateTime要求
+    const startTime = values.timeRange[0].toISOString();
+    const endTime = values.timeRange[1].toISOString();
+    
     // 构建考试数据
     const examData = {
-      ...values,
-      questions: examQuestions,
-      startTime: values.timeRange[0].format('YYYY-MM-DD HH:mm:ss'),
-      endTime: values.timeRange[1].format('YYYY-MM-DD HH:mm:ss'),
-      status: values.isPublished ? 'published' : 'draft',
-      createdAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-      updatedAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-      creator: '管理员',
-      questionsCount: examQuestions.length
+      examName: values.name,
+      examDesc: values.description,
+      examStartTime: startTime,
+      examEndTime: endTime,
+      duration: values.duration,
+      totalScore: values.totalScore,
+      passScore: values.passScore,
+      questions: examQuestions.map(q => ({
+        examQuestionId: null, // 新增题目，examQuestionId为null
+        examId: null, // 新增考试，examId为null
+        questionId: q.questionId,
+        questionScore: q.questionScore
+      }))
     };
     
-    // 模拟API请求
-    setTimeout(() => {
-      console.log('考试数据:', examData);
+    console.log('提交的考试数据:', examData);
+    
+    try {
+      const result = await createExam(examData);
+      
+      if (result.success) {
+        message.success('考试创建成功');
+        navigate('/admin/exams');
+      } else {
+        message.error(result.message || '创建考试失败');
+      }
+    } catch (error) {
+      console.error('提交表单错误:', error);
+      message.error('创建考试失败');
+    } finally {
       setLoading(false);
-      message.success('考试创建成功');
-      navigate('/admin/exams');
-    }, 1000);
+    }
   };
   
   // 返回考试列表
@@ -365,61 +334,8 @@ const ExamCreate: React.FC = () => {
     navigate('/admin/exams');
   };
   
-  // 题目列表列配置
-  const questionColumns: ColumnsType<QuestionType> = [
-    {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 60,
-    },
-    {
-      title: '题目内容',
-      dataIndex: 'content',
-      key: 'content',
-      ellipsis: true,
-      render: (text) => <Tooltip title={text}>{text}</Tooltip>,
-    },
-    {
-      title: '题型',
-      dataIndex: 'type',
-      key: 'type',
-      width: 100,
-      render: (type: 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay') => (
-        <Tag color={questionTypeMap[type].color}>
-          {questionTypeMap[type].text}
-        </Tag>
-      ),
-    },
-    {
-      title: '难度',
-      dataIndex: 'difficulty',
-      key: 'difficulty',
-      width: 80,
-      render: (difficulty: 'easy' | 'medium' | 'hard') => (
-        <Tag color={difficultyMap[difficulty].color}>
-          {difficultyMap[difficulty].text}
-        </Tag>
-      ),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 120,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => handlePreviewQuestion(record)}
-          />
-        </Space>
-      ),
-    },
-  ];
-  
-  // 已选题目列配置
-  const selectedQuestionColumns: ColumnsType<ExamQuestionType> = [
+  // 题目表格列
+  const questionColumns: ColumnsType<ExamQuestionType> = [
     {
       title: '序号',
       dataIndex: 'sort',
@@ -427,67 +343,97 @@ const ExamCreate: React.FC = () => {
       width: 60,
     },
     {
-      title: '题目内容',
-      dataIndex: 'content',
-      key: 'content',
-      ellipsis: true,
-      render: (text) => <Tooltip title={text}>{text}</Tooltip>,
-    },
-    {
       title: '题型',
-      dataIndex: 'type',
-      key: 'type',
+      dataIndex: 'questionType',
+      key: 'questionType',
       width: 100,
-      render: (type: 'single' | 'multiple' | 'judge' | 'fillBlank' | 'essay') => (
-        <Tag color={questionTypeMap[type].color}>
-          {questionTypeMap[type].text}
+      render: (type) => (
+        <Tag color={questionTypeMap[type]?.color}>
+          {questionTypeMap[type]?.text}
         </Tag>
-      ),
+      )
     },
     {
       title: '难度',
       dataIndex: 'difficulty',
       key: 'difficulty',
       width: 80,
-      render: (difficulty: 'easy' | 'medium' | 'hard') => (
-        <Tag color={difficultyMap[difficulty].color}>
-          {difficultyMap[difficulty].text}
+      render: (difficulty) => (
+        <Tag color={difficultyMap[difficulty]?.color}>
+          {difficultyMap[difficulty]?.text}
         </Tag>
-      ),
+      )
+    },
+    {
+      title: '题目内容',
+      dataIndex: 'questionText',
+      key: 'questionText',
+      ellipsis: true,
+      render: (text, record) => (
+        <a onClick={() => handlePreviewQuestion(record)}>{text}</a>
+      )
     },
     {
       title: '分值',
-      dataIndex: 'score',
-      key: 'score',
-      width: 80,
+      dataIndex: 'questionScore',
+      key: 'questionScore',
+      width: 100,
       render: (score, record) => (
         <InputNumber
           min={1}
-          max={100}
           value={score}
-          onChange={(value) => handleScoreChange(record.id, value as number)}
+          onChange={(value) => handleScoreChange(record.questionId, value as number)}
+          style={{ width: 60 }}
         />
-      ),
+      )
     },
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 80,
       render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => handlePreviewQuestion(record)}
-          />
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleRemoveQuestion(record.id)}
-          />
-        </Space>
+        <Button 
+          type="text" 
+          danger 
+          icon={<DeleteOutlined />} 
+          onClick={() => handleRemoveQuestion(record.questionId)}
+        />
       ),
+    },
+  ];
+  
+  // 题库题目表格列
+  const poolQuestionColumns: ColumnsType<QuestionType> = [
+    {
+      title: '题型',
+      dataIndex: 'questionType',
+      key: 'questionType',
+      width: 100,
+      render: (type) => (
+        <Tag color={questionTypeMap[type]?.color}>
+          {questionTypeMap[type]?.text}
+        </Tag>
+      )
+    },
+    {
+      title: '难度',
+      dataIndex: 'difficulty',
+      key: 'difficulty',
+      width: 80,
+      render: (difficulty) => (
+        <Tag color={difficultyMap[difficulty]?.color}>
+          {difficultyMap[difficulty]?.text}
+        </Tag>
+      )
+    },
+    {
+      title: '题目内容',
+      dataIndex: 'questionText',
+      key: 'questionText',
+      ellipsis: true,
+      render: (text, record) => (
+        <a onClick={() => handlePreviewQuestion(record)}>{text}</a>
+      )
     },
   ];
   
@@ -495,73 +441,93 @@ const ExamCreate: React.FC = () => {
   const renderQuestionPreview = () => {
     if (!selectedQuestion) return null;
     
+    const { questionType, questionText, options, answer, analysis } = selectedQuestion;
+    
     return (
       <div>
         <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Tag color={questionTypeMap[selectedQuestion.type].color}>
-              {questionTypeMap[selectedQuestion.type].text}
-            </Tag>
-            <Tag color={difficultyMap[selectedQuestion.difficulty].color}>
-              {difficultyMap[selectedQuestion.difficulty].text}
-            </Tag>
-          </Space>
+          <Tag color={questionTypeMap[questionType]?.color}>
+            {questionTypeMap[questionType]?.text}
+          </Tag>
+          <Tag color={difficultyMap[selectedQuestion.difficulty]?.color}>
+            {difficultyMap[selectedQuestion.difficulty]?.text}
+          </Tag>
         </div>
         
         <div style={{ marginBottom: 16 }}>
-          <Text strong>题目：</Text>
-          <div>{selectedQuestion.content}</div>
+          <div dangerouslySetInnerHTML={{ __html: questionText }} />
         </div>
         
-        {['single', 'multiple', 'judge'].includes(selectedQuestion.type) && (
+        {(questionType === QuestionTypeEnum.SINGLE_CHOICE || questionType === QuestionTypeEnum.MULTIPLE_CHOICE) && (
           <div style={{ marginBottom: 16 }}>
-            <Text strong>选项：</Text>
-            <div>
-              {selectedQuestion.options.map((option) => (
-                <div key={option.id} style={{ margin: '8px 0' }}>
-                  <Space>
-                    {option.isCorrect && <CheckCircleOutlined style={{ color: '#52c41a' }} />}
-                    <Text strong>{option.id}.</Text>
-                    <Text>{option.content}</Text>
-                  </Space>
-                </div>
-              ))}
-            </div>
+            {options?.map((option) => (
+              <div key={option.optionKey} style={{ marginBottom: 8 }}>
+                {questionType === QuestionTypeEnum.SINGLE_CHOICE ? (
+                  <Radio 
+                    checked={option.isCorrect} 
+                    disabled
+                    style={{ marginRight: 8 }}
+                  />
+                ) : (
+                  <Checkbox
+                    checked={option.isCorrect}
+                    disabled
+                    style={{ marginRight: 8 }}
+                  />
+                )}
+                {option.optionKey}. {option.optionValue}
+              </div>
+            ))}
           </div>
         )}
         
+        {questionType === QuestionTypeEnum.JUDGE && (
+          <div style={{ marginBottom: 16 }}>
+            <Radio.Group disabled value={answer === 'T' ? 'T' : 'F'}>
+              <Radio value="T">正确</Radio>
+              <Radio value="F">错误</Radio>
+            </Radio.Group>
+          </div>
+        )}
+        
+        {questionType === QuestionTypeEnum.FILL_BLANK && (
+          <div style={{ marginBottom: 16 }}>
+            <Input placeholder="填空题答案" disabled value={answer} />
+          </div>
+        )}
+        
+        {questionType === QuestionTypeEnum.ESSAY && (
+          <div style={{ marginBottom: 16 }}>
+            <TextArea placeholder="问答题答案" disabled value={answer} rows={4} />
+          </div>
+        )}
+        
+        <Divider orientation="left">参考答案</Divider>
         <div style={{ marginBottom: 16 }}>
           <Text strong>答案：</Text>
-          <div>{selectedQuestion.answer}</div>
+          <Text>{answer}</Text>
         </div>
         
         <div>
           <Text strong>解析：</Text>
-          <div>{selectedQuestion.analysis}</div>
+          <div dangerouslySetInnerHTML={{ __html: analysis }} />
         </div>
       </div>
     );
   };
-
+  
   return (
     <AdminLayout>
-      <Card
+      <Card 
         title={
           <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
-              返回
-            </Button>
-            <Title level={4} style={{ margin: 0 }}>创建考试</Title>
+            <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>返回</Button>
+            <span>创建考试</span>
           </Space>
         }
         extra={
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            loading={loading}
-            onClick={() => form.submit()}
-          >
-            保存
+          <Button type="primary" onClick={() => form.submit()} loading={loading}>
+            <SaveOutlined /> 保存考试
           </Button>
         }
       >
@@ -570,147 +536,125 @@ const ExamCreate: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
           initialValues={{
-            title: '',
-            description: '',
-            category: undefined,
-            duration: 60,
-            totalScore: 0,
-            passingScore: 60,
-            timeRange: [dayjs(), dayjs().add(7, 'day')],
-            isPublished: false,
-            isPublic: true,
+            duration: 120,
+            passScore: 60,
+            totalScore: 100,
           }}
         >
-          <Row gutter={24}>
-            <Col span={16}>
+          <Row gutter={[24, 0]}>
+            <Col span={24}>
               <Form.Item
-                name="title"
-                label="考试标题"
-                rules={[{ required: true, message: '请输入考试标题' }]}
+                name="name"
+                label="考试名称"
+                rules={[{ required: true, message: '请输入考试名称' }]}
               >
-                <Input placeholder="请输入考试标题" />
+                <Input placeholder="请输入考试名称" maxLength={50} />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            
+            <Col span={24}>
               <Form.Item
-                name="category"
-                label="考试分类"
-                rules={[{ required: true, message: '请选择考试分类' }]}
+                name="description"
+                label="考试描述"
+                rules={[{ required: true, message: '请输入考试描述' }]}
               >
-                <Select placeholder="请选择考试分类">
-                  <Option value="政治">政治</Option>
-                  <Option value="英语">英语</Option>
-                  <Option value="数学">数学</Option>
-                  <Option value="专业课">专业课</Option>
-                </Select>
+                <TextArea 
+                  placeholder="请输入考试描述，包括考试范围、注意事项等" 
+                  rows={4} 
+                  maxLength={500} 
+                />
               </Form.Item>
             </Col>
-          </Row>
-          
-          <Form.Item
-            name="description"
-            label="考试说明"
-          >
-            <TextArea rows={4} placeholder="请输入考试说明" />
-          </Form.Item>
-          
-          <Row gutter={24}>
-            <Col span={12}>
+            
+            <Col xs={24} md={12}>
               <Form.Item
                 name="timeRange"
                 label="考试时间范围"
                 rules={[{ required: true, message: '请选择考试时间范围' }]}
               >
-                <RangePicker
-                  showTime
-                  style={{ width: '100%' }}
+                <RangePicker 
+                  showTime 
+                  style={{ width: '100%' }} 
                   placeholder={['开始时间', '结束时间']}
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            
+            <Col xs={24} md={12}>
               <Form.Item
                 name="duration"
-                label="考试时长(分钟)"
+                label="考试时长（分钟）"
                 rules={[{ required: true, message: '请输入考试时长' }]}
+                tooltip="学生进入考试后的答题时间限制"
               >
-                <InputNumber min={1} style={{ width: '100%' }} />
+                <InputNumber min={1} max={300} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            
+            <Col xs={24} md={12}>
               <Form.Item
-                name="passingScore"
+                name="totalScore"
+                label="考试总分"
+                rules={[{ required: true, message: '请输入考试总分' }]}
+              >
+                <InputNumber 
+                  min={1} 
+                  disabled 
+                  style={{ width: '100%' }} 
+                  addonAfter="分"
+                />
+              </Form.Item>
+            </Col>
+            
+            <Col xs={24} md={12}>
+              <Form.Item
+                name="passScore"
                 label="及格分数"
                 rules={[{ required: true, message: '请输入及格分数' }]}
               >
-                <InputNumber min={1} style={{ width: '100%' }} />
+                <InputNumber 
+                  min={1} 
+                  style={{ width: '100%' }} 
+                  addonAfter="分"
+                />
               </Form.Item>
             </Col>
           </Row>
           
-          <Row gutter={24}>
-            <Col span={8}>
-              <Form.Item
-                name="totalScore"
-                label="总分"
+          <Divider orientation="left">考试题目</Divider>
+          
+          <div style={{ marginBottom: 16 }}>
+            <Space>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleOpenQuestionPool}
               >
-                <InputNumber min={0} style={{ width: '100%' }} disabled />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="isPublished"
-                label="是否立即发布"
-                valuePropName="checked"
-              >
-                <Switch checkedChildren="是" unCheckedChildren="否" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="isPublic"
-                label="是否公开"
-                valuePropName="checked"
-              >
-                <Switch checkedChildren="是" unCheckedChildren="否" />
-              </Form.Item>
-            </Col>
-          </Row>
+                从题库添加题目
+              </Button>
+              <Text>已选择 {examQuestions.length} 道题目</Text>
+              <Text>总分: {examQuestions.reduce((sum, q) => sum + q.questionScore, 0)} 分</Text>
+            </Space>
+          </div>
+          
+          <Table
+            columns={questionColumns}
+            dataSource={examQuestions}
+            rowKey="questionId"
+            pagination={false}
+            scroll={{ y: 400 }}
+            loading={loading}
+            locale={{ emptyText: '请点击上方按钮从题库添加题目' }}
+          />
         </Form>
-        
-        <Divider orientation="left">考试题目</Divider>
-        
-        <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleOpenQuestionPool}
-            >
-              添加题目
-            </Button>
-            <Text>
-              已选择 <Text strong>{examQuestions.length}</Text> 道题目，
-              总分 <Text strong>{examQuestions.reduce((sum, q) => sum + q.score, 0)}</Text> 分
-            </Text>
-          </Space>
-        </div>
-        
-        <Table
-          columns={selectedQuestionColumns}
-          dataSource={examQuestions}
-          rowKey="id"
-          pagination={false}
-          bordered
-        />
       </Card>
       
-      {/* 题库选择弹窗 */}
+      {/* 选择题目对话框 */}
       <Modal
-        title="选择题目"
+        title="从题库选择题目"
         open={questionPoolVisible}
+        width={900}
         onCancel={handleCloseQuestionPool}
-        width={1000}
         footer={[
           <Button key="cancel" onClick={handleCloseQuestionPool}>
             取消
@@ -719,72 +663,73 @@ const ExamCreate: React.FC = () => {
             key="submit"
             type="primary"
             onClick={handleSelectQuestions}
+            disabled={selectedQuestionIds.length === 0}
           >
-            确定 ({selectedQuestionIds.length})
+            添加所选题目 ({selectedQuestionIds.length})
           </Button>,
         ]}
       >
-        <div style={{ marginBottom: 16 }}>
-          <Form
-            form={searchForm}
-            layout="inline"
-            onFinish={handleSearchQuestions}
-          >
-            <Form.Item name="keyword">
-              <Input placeholder="关键词搜索" allowClear />
-            </Form.Item>
-            <Form.Item name="type">
-              <Select
-                placeholder="题目类型"
-                style={{ width: 120 }}
-                allowClear
-              >
-                <Option value="single">单选题</Option>
-                <Option value="multiple">多选题</Option>
-                <Option value="judge">判断题</Option>
-                <Option value="fillBlank">填空题</Option>
-                <Option value="essay">问答题</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item name="difficulty">
-              <Select
-                placeholder="难度"
-                style={{ width: 100 }}
-                allowClear
-              >
-                <Option value="easy">简单</Option>
-                <Option value="medium">中等</Option>
-                <Option value="hard">困难</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item>
-              <Button type="primary" htmlType="submit">
-                搜索
-              </Button>
-            </Form.Item>
-            <Form.Item>
-              <Button onClick={handleResetSearch}>重置</Button>
-            </Form.Item>
-          </Form>
-        </div>
+        <Form
+          form={searchForm}
+          layout="inline"
+          onFinish={handleSearchQuestions}
+          style={{ marginBottom: 16 }}
+        >
+          <Form.Item name="keyword">
+            <Input
+              placeholder="搜索题目内容"
+              allowClear
+              style={{ width: 200 }}
+            />
+          </Form.Item>
+          <Form.Item name="type">
+            <Select placeholder="题目类型" allowClear style={{ width: 120 }}>
+              <Option value={QuestionTypeEnum.SINGLE_CHOICE}>单选题</Option>
+              <Option value={QuestionTypeEnum.MULTIPLE_CHOICE}>多选题</Option>
+              <Option value={QuestionTypeEnum.JUDGE}>判断题</Option>
+              <Option value={QuestionTypeEnum.FILL_BLANK}>填空题</Option>
+              <Option value={QuestionTypeEnum.ESSAY}>问答题</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="difficulty">
+            <Select placeholder="难度" allowClear style={{ width: 120 }}>
+              <Option value="easy">简单</Option>
+              <Option value="medium">中等</Option>
+              <Option value="hard">困难</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              搜索
+            </Button>
+            <Button style={{ marginLeft: 8 }} onClick={handleResetSearch}>
+              重置
+            </Button>
+          </Form.Item>
+        </Form>
         
         <Table
           rowSelection={{
+            type: 'checkbox',
             selectedRowKeys: selectedQuestionIds,
             onChange: (selectedRowKeys) => {
               setSelectedQuestionIds(selectedRowKeys as number[]);
             },
+            getCheckboxProps: (record) => ({
+              disabled: examQuestions.some(q => q.questionId === record.questionId),
+            }),
           }}
-          columns={questionColumns}
+          columns={poolQuestionColumns}
           dataSource={filteredQuestions}
-          rowKey="id"
-          pagination={{ pageSize: 10 }}
+          rowKey="questionId"
           loading={questionLoading}
+          pagination={{ pageSize: 10 }}
+          scroll={{ y: 400 }}
           size="small"
         />
       </Modal>
       
-      {/* 题目预览弹窗 */}
+      {/* 预览题目对话框 */}
       <Modal
         title="题目预览"
         open={questionPreviewVisible}
@@ -794,6 +739,7 @@ const ExamCreate: React.FC = () => {
             关闭
           </Button>,
         ]}
+        width={700}
       >
         {renderQuestionPreview()}
       </Modal>
