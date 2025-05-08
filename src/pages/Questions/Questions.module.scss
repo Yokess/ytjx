@@ -728,4 +728,63 @@
     color: #666;
     line-height: 1.6;
   }
+}
+
+// 高亮文本样式
+.highlight {
+  background-color: #ffff80;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.knowledgePoint {
+  display: inline-block;
+  margin-left: 8px;
+  color: #606060;
+  font-size: 0.9em;
+}
+
+// 相似题目卡片样式
+.similarQuestionsCard {
+  margin-top: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  
+  :global {
+    .ant-card-head {
+      border-bottom: 1px solid #f0f0f0;
+      padding: 0 16px;
+    }
+    
+    .ant-list-item {
+      padding: 12px 16px;
+      
+      &:hover {
+        background-color: #f9f9f9;
+      }
+    }
+    
+    .ant-list-item-meta-title {
+      margin-bottom: 8px;
+      
+      a {
+        color: #333;
+        font-weight: 500;
+        
+        &:hover {
+          color: #1890ff;
+        }
+      }
+    }
+    
+    .ant-list-item-meta-description {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .ant-tag {
+      margin-right: 0;
+    }
+  }
 } 

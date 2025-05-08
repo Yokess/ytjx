@@ -36,7 +36,8 @@ import MainLayout from '../../components/layout/MainLayout';
 import { RootState } from '../../store';
 import { 
   fetchQuestions, 
-  fetchLeaderboard, 
+  fetchLeaderboard,
+  searchQuestions,
   setCurrentPage, 
   setPageSize 
 } from '../../store/slices/questionSlice';
@@ -49,6 +50,8 @@ import styles from './Questions.module.scss';
 // 导入默认头像
 import defaultAvatar from '../../assets/images/default-avatar.svg';
 import questionApi from '../../api/questionApi';
+import HighlightText from '../../components/HighlightText';
+import questionSearchApi from '../../api/questionSearchApi';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -87,16 +90,22 @@ const QuestionsPage: React.FC = () => {
   
   // 从Redux获取状态
   const { 
-    questions, 
-    total, 
+    questions: reduxQuestions,
+    searchResults,
+    searchTotal,
+    searchCurrentPage,
+    total: reduxTotal, 
     currentPage, 
     pageSize, 
     totalPages,
-    loading,
+    loading: reduxLoading,
     leaderboard
   } = useSelector((state: RootState) => state.question);
   
   // 本地状态
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useState<QuestionQueryParams>({
     keyword: '',
     page: 1,
@@ -110,11 +119,31 @@ const QuestionsPage: React.FC = () => {
   const [showAnswer, setShowAnswer] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  
+  // 获取题目列表
+  const fetchQuestions = async () => {
+    setLoading(true);
+    try {
+      const response = await questionSearchApi.searchQuestions(searchParams);
+      if (response.success && response.data) {
+        setQuestions(response.data.list || []);
+        setTotal(response.data.total || 0);
+      } else {
+        message.error(response.message || '获取题目失败');
+      }
+    } catch (error) {
+      console.error('获取题目失败:', error);
+      message.error('获取题目失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // 初始加载
   useEffect(() => {
     // 获取题目列表
-    dispatch(fetchQuestions(searchParams) as any);
+    fetchQuestions();
     
     // 获取排行榜
     dispatch(fetchLeaderboard({}) as any);
@@ -122,8 +151,8 @@ const QuestionsPage: React.FC = () => {
   
   // 当搜索参数变化时重新获取题目
   useEffect(() => {
-    dispatch(fetchQuestions(searchParams) as any);
-  }, [dispatch, searchParams]);
+    fetchQuestions();
+  }, [searchParams]);
   
   // 处理搜索
   const handleSearch = () => {
@@ -289,7 +318,7 @@ const QuestionsPage: React.FC = () => {
         
         {/* 做题排行榜 */}
         <Card title="做题排行榜" className={styles.leaderboardCard}>
-          {loading.leaderboard ? (
+          {reduxLoading.leaderboard ? (
             <div className={styles.loadingContainer}>
               <Spin />
             </div>
@@ -335,6 +364,14 @@ const QuestionsPage: React.FC = () => {
   const renderQuestionCard = (question: any) => {
     const isSelected = currentQuestion?.questionId === question.questionId;
     
+    // 处理高亮内容 - 适配ES搜索接口返回的数据
+    const displayContent = question.highlightFields?.questionText?.[0] || question.questionText;
+    const displayKnowledgePoints = question.highlightFields?.knowledgePoint?.[0] || question.knowledgePoint;
+    
+    // 处理题目类型和难度
+    const questionType = question.questionType;
+    const difficultyLevel = question.difficultyLevel;
+    
     return (
       <Card 
         key={question.questionId} 
@@ -342,27 +379,41 @@ const QuestionsPage: React.FC = () => {
         onClick={() => handleQuestionClick(question)}
       >
         <div className={styles.questionHeader}>
-          <Tag color={getTypeColor(question.type)}>{getTypeLabel(question.type)}</Tag>
-          <Tag color={getDifficultyColor(question.difficulty)}>
-            {getDifficultyLabel(question.difficulty)}
+          <Tag color={getTypeColor(questionType)}>{getTypeLabel(questionType)}</Tag>
+          <Tag color={getDifficultyColor(difficultyLevel)}>
+            {getDifficultyLabel(difficultyLevel)}
           </Tag>
+          {displayKnowledgePoints && (
+            <HighlightText 
+              text={displayKnowledgePoints}
+              html={!!question.highlightFields?.knowledgePoint}
+              className={styles.knowledgePoint}
+              customStyle={true}
+            />
+          )}
         </div>
         
         <div className={styles.questionContent}>
-          <div className={styles.questionText}>{question.content}</div>
+          <div className={styles.questionText}>
+            <HighlightText 
+              text={displayContent}
+              html={!!question.highlightFields?.questionText}
+              customStyle={true}
+            />
+          </div>
           
-          {isSelected && (
+          {isSelected && question.options && (
             <div className={styles.answerSection}>
               <div className={styles.optionsGrid}>
                 {question.options.map((option: any) => (
-                  <div key={option.id} className={styles.optionItem}>
+                  <div key={option.optionId} className={styles.optionItem}>
                     <Radio 
-                      value={option.id} 
-                      checked={selectedAnswer === option.id}
-                      onChange={() => handleAnswerSelect(option.id)}
+                      value={option.optionId} 
+                      checked={selectedAnswer === option.optionId}
+                      onChange={() => handleAnswerSelect(option.optionId)}
                       disabled={showAnswer}
                     >
-                      {option.content.replace(/^\d+\.\s*/, '')}
+                      {option.optionValue}
                     </Radio>
                   </div>
                 ))}
@@ -451,7 +502,7 @@ const QuestionsPage: React.FC = () => {
             </div>
             <div className={styles.statInfo}>
               <h3>总做题量</h3>
-              <p>{total}</p>
+              <p>{reduxTotal}</p>
             </div>
           </Card>
           <Card className={styles.statCard}>
@@ -628,20 +679,23 @@ const QuestionsPage: React.FC = () => {
           className={styles.tabs}
         >
           <TabPane tab="全部题目" key="all">
-            {loading.questions ? (
+            {loading ? (
               <div className={styles.loadingContainer}>
                 <Spin size="large" />
               </div>
-            ) : questions && questions.length > 0 ? (
+            ) : (
               <>
                 <div className={styles.questionsList}>
-                  {questions.map(question => renderQuestionCard(question))}
+                  {questions.length > 0 
+                    ? questions.map(question => renderQuestionCard(question))
+                    : <Empty description="没有找到相关题目" />
+                  }
                 </div>
                 
                 <div className={styles.pagination}>
                   <Pagination
-                    current={currentPage}
-                    pageSize={pageSize}
+                    current={searchParams.page || 1}
+                    pageSize={searchParams.size || 10}
                     total={total}
                     showSizeChanger
                     showQuickJumper
@@ -651,8 +705,6 @@ const QuestionsPage: React.FC = () => {
                   />
                 </div>
               </>
-            ) : (
-              <Empty description="暂无题目" />
             )}
           </TabPane>
           

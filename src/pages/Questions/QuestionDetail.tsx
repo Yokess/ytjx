@@ -5,6 +5,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import MainLayout from '../../components/layout/MainLayout';
 import styles from './Questions.module.scss';
 import questionApi from '../../api/questionApi';
+import SimilarQuestions from '../../components/SimilarQuestions';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -310,6 +311,9 @@ const QuestionDetail: React.FC = () => {
             {renderResult()}
           </div>
         </Card>
+        
+        {/* 添加相似题目推荐 */}
+        {question && <SimilarQuestions questionId={parseInt(questionId || '0')} limit={5} />}
       </div>
     </MainLayout>
   );

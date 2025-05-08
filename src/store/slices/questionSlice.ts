@@ -10,6 +10,7 @@ import {
   Leaderboard
 } from '../../types/question';
 import questionApi from '../../api/questionApi';
+import questionSearchApi from '../../api/questionSearchApi';
 
 // 定义状态类型
 interface QuestionState {
@@ -30,6 +31,14 @@ interface QuestionState {
   
   // 排行榜
   leaderboard: Leaderboard | null;
+
+  //搜索相关
+  searchResults: Question[];
+  searchTotal: number;
+  searchCurrentPage: number;
+  searchPageSize: number;
+  searchTotalPages: number;
+  similarQuestions: QuestionDetail[];
   
   // 加载状态
   loading: {
@@ -38,6 +47,9 @@ interface QuestionState {
     submitAnswer: boolean;
     wrongQuestions: boolean;
     leaderboard: boolean;
+
+    search: boolean;
+    similarQuestions: boolean;
   };
   
   // 错误信息
@@ -47,10 +59,15 @@ interface QuestionState {
     submitAnswer: string | null;
     wrongQuestions: string | null;
     leaderboard: string | null;
+
+    search: string | null;
+    similarQuestions: string | null;
   };
   
   // 答题结果
   answerResult: SubmitAnswerResponse | null;
+
+
 }
 
 // 初始状态
@@ -68,13 +85,23 @@ const initialState: QuestionState = {
   wrongQuestionsCurrentPage: 1,
   
   leaderboard: null,
+
+  // 搜索相关
+  searchResults: [],
+  searchTotal: 0,
+  searchCurrentPage: 1,
+  searchPageSize: 20,
+  searchTotalPages: 0,
+  similarQuestions: [],
   
   loading: {
     questions: false,
     questionDetail: false,
     submitAnswer: false,
     wrongQuestions: false,
-    leaderboard: false
+    leaderboard: false,
+    search: false,
+    similarQuestions: false,
   },
   
   error: {
@@ -82,7 +109,9 @@ const initialState: QuestionState = {
     questionDetail: null,
     submitAnswer: null,
     wrongQuestions: null,
-    leaderboard: null
+    leaderboard: null,
+    search: null,
+    similarQuestions: null,
   },
   
   answerResult: null
@@ -147,6 +176,50 @@ export const fetchLeaderboard = createAsyncThunk(
     try {
       const response = await questionApi.getLeaderboard(limit);
       return response;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+export const searchQuestions =createAsyncThunk(
+  'question/searchQuestions',
+  async (params: QuestionQueryParams,{rejectWithValue})=>{
+    try{
+      const response=await questionSearchApi.searchQuestions(params);
+      if(response.success){
+        return response.data;
+      }
+      return rejectWithValue(response.message);
+    }catch(error){
+      return rejectWithValue((error as Error).message);
+    }
+  }
+)
+
+// 异步Action: 获取相似题目
+export const fetchSimilarQuestions = createAsyncThunk(
+  'question/fetchSimilarQuestions',
+  async ({ questionId, limit }: { questionId: number; limit?: number }, { rejectWithValue }) => {
+    try {
+      const response = await questionSearchApi.getSimilarQuestions(questionId, limit);
+      if (response.success) {
+        return response.data;
+      }
+      return rejectWithValue(response.message);
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+// 异步Action: 初始化题目索引
+export const initQuestionIndex = createAsyncThunk(
+  'question/initQuestionIndex',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await questionSearchApi.initQuestionIndex();
+      return response.success;
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
@@ -254,6 +327,40 @@ const questionSlice = createSlice({
       .addCase(fetchLeaderboard.rejected, (state, action) => {
         state.loading.leaderboard = false;
         state.error.leaderboard = action.payload as string;
+      });
+
+      // 处理搜索题目
+    builder
+      .addCase(searchQuestions.pending, (state) => {
+        state.loading.search = true;
+        state.error.search = null;
+      })
+      .addCase(searchQuestions.fulfilled, (state, action) => {
+        state.loading.search = false;
+        state.searchResults = action.payload.list || [];
+        state.searchTotal = action.payload.total || 0;
+        state.searchCurrentPage = action.payload.currentPage || 1;
+        state.searchPageSize = action.payload.pageSize || 20;
+        state.searchTotalPages = Math.ceil(action.payload.total / state.searchPageSize);
+      })
+      .addCase(searchQuestions.rejected, (state, action) => {
+        state.loading.search = false;
+        state.error.search = action.payload as string;
+      });
+
+    // 处理获取相似题目
+    builder
+      .addCase(fetchSimilarQuestions.pending, (state) => {
+        state.loading.similarQuestions = true;
+        state.error.similarQuestions = null;
+      })
+      .addCase(fetchSimilarQuestions.fulfilled, (state, action) => {
+        state.loading.similarQuestions = false;
+        state.similarQuestions = action.payload || [];
+      })
+      .addCase(fetchSimilarQuestions.rejected, (state, action) => {
+        state.loading.similarQuestions = false;
+        state.error.similarQuestions = action.payload as string;
       });
   }
 });

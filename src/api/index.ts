@@ -9,6 +9,7 @@ export * from './questionApi';
 export * from './examApi';
 export * from './communityApi';
 export * from './aiApi';
+export * from './questionSearchApi'
 
 // API基础URL
 const BASE_URL = process.env.REACT_APP_API_URL || '';
